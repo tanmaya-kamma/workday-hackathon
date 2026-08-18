@@ -128,7 +128,7 @@ export function LeaveProvider({ children }) {
           role: u.role,
           department: u.department,
           managerId: u.manager_id,
-          managerName: u.manager_id ? 'Manager' : 'N/A',
+          managerName: u.manager_name || (u.manager_id ? 'Manager' : 'N/A'),
           position: u.role === 'manager' ? 'Team Lead / Manager' : (u.role === 'hr' ? 'HR Administrator' : 'Staff Member'),
           status: 'Active',
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name)}&background=0875e1&color=fff`,

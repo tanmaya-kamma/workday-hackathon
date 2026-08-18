@@ -411,7 +411,7 @@ export function RequestLeavePage() {
               </div>
               <div>
                 <div className="text-xs font-bold text-[#0f1d27]">
-                  {currentUser?.managerName || 'Sarah Mitchell'}
+                  {currentUser?.managerName || currentUser?.department || 'Manager'}
                 </div>
                 <div className="text-[11px] text-[#687781]">
                   {role === 'manager'

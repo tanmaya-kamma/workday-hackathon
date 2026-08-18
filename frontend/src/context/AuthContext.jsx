@@ -67,6 +67,8 @@ export function AuthProvider({ children }) {
         employeeId: profile.employee_id,
         managerId: profile.manager_id,
         manager_id: profile.manager_id,
+        managerName: profile.manager_name,
+        manager_name: profile.manager_name,
         position: profile.role === 'manager' ? 'Team Lead / Manager' : (profile.role === 'hr' ? 'HR Administrator' : 'Staff Member'),
         avatar: profile.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=0875e1&color=fff`,
         leave_balances: profile.leave_balances || { annual: 20, sick: 12, casual: 6, unpaid: 0 },
