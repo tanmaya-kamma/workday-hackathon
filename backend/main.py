@@ -17,9 +17,9 @@ from app.core.database import init_db, close_db, ping_db
 from app.routers.auth import router as auth_router
 from app.routers.leaves import router as leaves_router
 from app.routers.notifications import router as notifications_router
-from app.routers.policies import router as policies_router
 from app.routers.admin import router as admin_router
 from app.routers.hr import router as hr_router
+from app.routers.accrual import router as accrual_router
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -77,9 +77,16 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(leaves_router)
 app.include_router(notifications_router)
-app.include_router(policies_router)
 app.include_router(admin_router)
 app.include_router(hr_router)
+app.include_router(accrual_router)
+
+
+@app.get("/", tags=["Root"])
+async def root():
+    return {
+        "message": "Workday Leave Management System API is running"
+    }
 
 
 @app.get("/api/v1/health", tags=["Health"])
