@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-primary: #00646f;
+    --color-primary-container: #087f8c;
+    --color-on-primary: #ffffff;
+    --color-on-primary-container: #effdff;
+    --color-secondary: #2c6098;
+    --color-secondary-container: #92c1ff;
+    --color-surface: #ffffff;
+    --color-surface-dim: #cddcea;
+    --color-surface-low: #ebf5ff;
+    --color-surface-container: #e1f0fe;
+    --color-surface-high: #dbeaf9;
+    --color-background: #f5f7f8;
+    --color-on-surface: #0f1d27;
+    --color-muted: #687781;
+    --color-border: #dfe5e8;
+    --color-success: #2e7d5b;
+    --color-warning: #b7791f;
+    --color-danger: #c94b4b;
+    --color-info: #3d6fa8;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-on-surface);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #bdc9ca;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6e797b;
+}
