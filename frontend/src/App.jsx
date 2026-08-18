@@ -14,6 +14,7 @@ import { SignupPage } from './pages/auth/SignupPage.jsx';
 import { EmployeeDashboardPage } from './pages/employee/EmployeeDashboardPage.jsx';
 import { RequestLeavePage } from './pages/employee/RequestLeavePage.jsx';
 import { MyRequestsPage } from './pages/employee/MyRequestsPage.jsx';
+import { WhatIfPage } from './pages/employee/WhatIfPage.jsx';
 
 // Manager Pages
 import { ManagerDashboardPage } from './pages/manager/ManagerDashboardPage.jsx';
@@ -55,6 +56,7 @@ export function App() {
         <Route path="/employee/dashboard" element={<RoleRoute allowedRoles={['employee']}><EmployeeDashboardPage /></RoleRoute>} />
         <Route path="/employee/my-leave" element={<RoleRoute allowedRoles={['employee']}><MyRequestsPage /></RoleRoute>} />
         <Route path="/employee/request-leave" element={<RoleRoute allowedRoles={['employee']}><RequestLeavePage /></RoleRoute>} />
+        <Route path="/employee/what-if" element={<RoleRoute allowedRoles={['employee']}><WhatIfPage /></RoleRoute>} />
 
         {/* Manager Routes */}
         <Route path="/manager/dashboard" element={<RoleRoute allowedRoles={['manager']}><ManagerDashboardPage /></RoleRoute>} />
@@ -63,6 +65,7 @@ export function App() {
         <Route path="/manager/team-requests" element={<RoleRoute allowedRoles={['manager']}><TeamRequestsPage /></RoleRoute>} />
         <Route path="/manager/approvals" element={<RoleRoute allowedRoles={['manager']}><PendingApprovalsPage /></RoleRoute>} />
         <Route path="/manager/calendar" element={<RoleRoute allowedRoles={['manager']}><TeamCalendarPage /></RoleRoute>} />
+        <Route path="/manager/what-if" element={<RoleRoute allowedRoles={['manager']}><WhatIfPage /></RoleRoute>} />
 
         {/* HR Routes */}
         <Route path="/hr/dashboard" element={<RoleRoute allowedRoles={['hr']}><HrDashboardPage /></RoleRoute>} />

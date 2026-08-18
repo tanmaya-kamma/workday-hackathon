@@ -20,6 +20,7 @@ from app.routers.notifications import router as notifications_router
 from app.routers.hr import router as hr_router
 from app.routers.accrual import router as accrual_router
 from app.routers.eligibility import router as eligibility_router
+from app.routers.scenarios import router as scenarios_router
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -68,6 +69,7 @@ app.include_router(notifications_router)
 app.include_router(hr_router)
 app.include_router(accrual_router)
 app.include_router(eligibility_router)
+app.include_router(scenarios_router)
 
 
 @app.get("/", tags=["Root"])
