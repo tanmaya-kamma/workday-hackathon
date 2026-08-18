@@ -28,6 +28,7 @@ class AccrualService:
     - Regional calendar integration
     - Approved leave usage
     - Pending leave calculation
+    - Carry-forward calculation
     - Balance calculation
     - Persisting calculated balances
     """
@@ -40,9 +41,6 @@ class AccrualService:
     def get_employee(employee_id: str) -> Optional[dict]:
         """
         Find an employee using the human-readable employee ID.
-
-        Example:
-            HR001
         """
 
         return users_collection.find_one({
@@ -94,7 +92,7 @@ class AccrualService:
         """
         Calculate employee tenure in years.
 
-        Returns a decimal value so that policies can
+        Returns a decimal value so policies can
         evaluate tenure accurately.
         """
 
@@ -133,14 +131,7 @@ class AccrualService:
     ) -> float:
         """
         Determine annual leave entitlement based on
-        the employee's tenure and policy rules.
-
-        Example:
-
-            0-1 years  -> 12
-            1-3 years  -> 18
-            3-5 years  -> 24
-            5+ years   -> 30
+        employee tenure and policy rules.
         """
 
         rules = policy.get(
@@ -148,7 +139,6 @@ class AccrualService:
             []
         )
 
-        # Policy without tenure rules
         if not rules:
 
             entitlement = policy.get(
@@ -178,15 +168,12 @@ class AccrualService:
             if tenure_years < min_years:
                 continue
 
-            # No upper limit
             if max_years is None:
-
                 return float(
                     rule["annual_entitlement"]
                 )
 
             if tenure_years < float(max_years):
-
                 return float(
                     rule["annual_entitlement"]
                 )
@@ -280,19 +267,11 @@ class AccrualService:
         as_of_date: date
     ) -> int:
         """
-        Calculate the number of monthly accrual periods
-        applicable in the current year.
+        Calculate monthly accrual periods applicable
+        in the current year.
 
         For an employee who joined during the current year,
         accrual starts from the joining month.
-
-        Example:
-
-            Joined: March
-            As of: August
-
-            Accrual periods = March, April, May, June,
-                              July, August = 6
         """
 
         if as_of_date < joining_date:
@@ -424,7 +403,6 @@ class AccrualService:
 
         if frequency == "MONTHLY":
 
-            # First-year daily proration
             if (
                 proration_enabled
                 and joining_date.year == as_of_date.year
@@ -464,7 +442,6 @@ class AccrualService:
                     policy
                 )
 
-            # Standard monthly accrual
             earned = (
                 AccrualService.calculate_monthly_accrual(
                     annual_entitlement,
@@ -513,8 +490,7 @@ class AccrualService:
         basis: str = "WORKING_DAYS"
     ) -> int:
         """
-        Calculate the number of leave days charged
-        against the employee's balance.
+        Calculate leave days charged against balance.
 
         Regional holidays and weekends are excluded
         when using WORKING_DAYS.
@@ -550,9 +526,6 @@ class AccrualService:
     ) -> float:
         """
         Calculate approved leave usage up to as_of_date.
-
-        Regional weekends and holidays are excluded when
-        the policy uses WORKING_DAYS.
         """
 
         leave_type = leave_type.lower()
@@ -579,14 +552,12 @@ class AccrualService:
                 request["end_date"]
             )
 
-            # Request is completely outside the year
             if end.year < year:
                 continue
 
             if start.year > year:
                 continue
 
-            # Leave has not happened yet
             if start > as_of_date:
                 continue
 
@@ -631,9 +602,6 @@ class AccrualService:
     ) -> float:
         """
         Calculate pending leave that acts as a reservation.
-
-        Pending leave reduces usable balance but is not
-        deducted from accrued balance until approved.
         """
 
         leave_type = leave_type.lower()
@@ -704,19 +672,17 @@ class AccrualService:
         policy: dict
     ) -> dict:
         """
-        Calculate remaining and usable leave.
+        Calculate remaining and usable leave balance.
 
-        Formula:
+        Remaining:
+            accrued
+            + carry_forward
+            + adjustments
+            - used
+            - expired
 
-            Remaining =
-                Accrued
-                + Carry Forward
-                + Adjustments
-                - Used
-                - Expired
-
-            Usable =
-                Remaining - Pending
+        Usable:
+            remaining - pending
         """
 
         balance_config = policy.get(
@@ -754,6 +720,8 @@ class AccrualService:
                 float(maximum)
             )
 
+        # Pending leave is reserved but not deducted
+        # from permanent remaining balance.
         usable = max(
             available - pending,
             0.0
@@ -769,6 +737,96 @@ class AccrualService:
                 2
             )
         }
+
+    # =========================================================
+    # CARRY FORWARD
+    # =========================================================
+
+    @staticmethod
+    def calculate_carry_forward(
+        user_id: ObjectId,
+        leave_type: str,
+        current_year: int,
+        policy: dict
+    ) -> float:
+        """
+        Calculate leave carried forward from the previous year.
+
+        Carry-forward is completely policy-driven.
+
+        Example:
+
+            Previous balance = 25
+            max_days         = 30
+
+            Carry forward = 25
+
+        Example:
+
+            Previous balance = 25
+            max_days         = 10
+
+            Carry forward = 10
+        """
+
+        carry_forward_policy = policy.get(
+            "carry_forward",
+            {}
+        )
+
+        if not carry_forward_policy.get(
+            "enabled",
+            False
+        ):
+            return 0.0
+
+        max_days = carry_forward_policy.get(
+            "max_days"
+        )
+
+        if max_days is None:
+            return 0.0
+
+        max_days = float(max_days)
+
+        if max_days <= 0:
+            return 0.0
+
+        previous_year = current_year - 1
+
+        previous_balance = (
+            leave_balances_collection.find_one(
+                {
+                    "user_id": user_id,
+                    "year": previous_year
+                }
+            )
+        )
+
+        if previous_balance is None:
+            return 0.0
+
+        balances = previous_balance.get(
+            "balances",
+            {}
+        )
+
+        leave_data = balances.get(
+            leave_type.lower(),
+            {}
+        )
+
+        previous_remaining = float(
+            leave_data.get(
+                "remaining",
+                0
+            )
+        )
+
+        return min(
+            previous_remaining,
+            max_days
+        )
 
     # =========================================================
     # SINGLE LEAVE TYPE
@@ -794,8 +852,6 @@ class AccrualService:
                 f"No policy found for {leave_type}"
             )
 
-        # Policy determines whether leave is counted
-        # using working days or calendar days.
         day_count_basis = policy.get(
             "day_count_basis",
             "WORKING_DAYS"
@@ -860,12 +916,22 @@ class AccrualService:
         )
 
         # -----------------------------------------------------
+        # CARRY FORWARD
+        # -----------------------------------------------------
+
+        carry_forward = (
+            AccrualService.calculate_carry_forward(
+                user_id=user_id,
+                leave_type=leave_type,
+                current_year=as_of_date.year,
+                policy=policy
+            )
+        )
+
+        # -----------------------------------------------------
         # MVP VALUES
         # -----------------------------------------------------
 
-        # Carry-forward, adjustments and expiry will be
-        # implemented in the next MVP phase.
-        carry_forward = 0.0
         adjustments = 0.0
         expired = 0.0
 
@@ -978,9 +1044,6 @@ class AccrualService:
     ):
         """
         Save calculated balances into leave_balances.
-
-        Existing schema is preserved while adding
-        dynamic accrual information.
         """
 
         user_id = employee["_id"]
