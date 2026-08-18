@@ -11,7 +11,30 @@ Workflow:
         ↓
     MongoDB
 
-Database access continues to use the existing get_db() pattern.
+Multi-tier approval:
+
+    1–2 days:
+        Employee → Manager → APPROVED
+
+    3–5 days:
+        Employee → Manager → Manager's Manager / HR → APPROVED
+
+    6+ days:
+        Employee → Manager's Manager / HR → APPROVED
+
+The HR approver is resolved from the manager hierarchy.
+
+Example:
+
+    Sana Sheikh
+        manager_id → Ravi Patel
+
+    Ravi Patel
+        manager_id → Priya Mehta (HR)
+
+Therefore:
+
+    Sana → Ravi → Priya
 """
 
 from datetime import datetime, timezone
@@ -21,6 +44,7 @@ from bson import ObjectId
 from fastapi import HTTPException, status
 
 from app.core.database import get_db
+
 from app.schemas.leave import (
     LeaveResponse,
     LeaveListResponse,
@@ -44,17 +68,7 @@ from app.services.notification_service import (
 
 def _normalize_leave_type(leave_type: str) -> str:
     """
-    Convert external/API leave type names into the canonical
-    leave types used by the policy and accrual engines.
-
-    Supported mappings:
-
-        annual   -> vacation
-        vacation -> vacation
-        casual   -> personal
-        personal -> personal
-        sick     -> sick
-        unpaid   -> unpaid
+    Convert external/API leave type names into canonical leave types.
     """
 
     if not isinstance(leave_type, str):
@@ -78,6 +92,141 @@ def _normalize_leave_type(leave_type: str) -> str:
 
 
 # ============================================================================
+# HR APPROVER RESOLUTION
+# ============================================================================
+
+
+async def _resolve_hr_approver(
+    db,
+    manager_id,
+):
+    """
+    Resolve the HR approver for an employee's leave request.
+
+    Hierarchy:
+
+        Employee
+            ↓
+        Manager
+            ↓
+        Manager's manager
+
+    Example:
+
+        Sana → Ravi → Priya
+
+    Ravi.manager_id points to Priya, so Priya becomes
+    the HR approver.
+
+    If the manager's manager does not exist or is not HR,
+    an active HR user is used as fallback.
+    """
+
+    # ------------------------------------------------------------------
+    # If no manager exists, find an active HR user.
+    # ------------------------------------------------------------------
+
+    if not manager_id:
+        hr_user = await db.users.find_one(
+            {
+                "role": "hr",
+                "is_active": True,
+            }
+        )
+
+        if hr_user:
+            return hr_user
+
+        return None
+
+    # ------------------------------------------------------------------
+    # Find the assigned manager.
+    # ------------------------------------------------------------------
+
+    manager_oid = _to_object_id(manager_id)
+
+    manager_doc = None
+
+    if manager_oid is not None:
+
+        manager_doc = await db.users.find_one(
+            {
+                "_id": manager_oid
+            }
+        )
+
+    # Also support human-readable/string IDs.
+    if not manager_doc:
+
+        manager_doc = await db.users.find_one(
+            {
+                "employee_id": str(manager_id)
+            }
+        )
+
+    # ------------------------------------------------------------------
+    # Manager's manager = next approval level.
+    # ------------------------------------------------------------------
+
+    if manager_doc:
+
+        manager_manager_id = manager_doc.get(
+            "manager_id"
+        )
+
+        if manager_manager_id:
+
+            next_manager_oid = _to_object_id(
+                manager_manager_id
+            )
+
+            hr_approver = None
+
+            if next_manager_oid is not None:
+
+                hr_approver = await db.users.find_one(
+                    {
+                        "_id": next_manager_oid,
+                        "is_active": True,
+                    }
+                )
+
+            # Support employee_id based manager references.
+            if not hr_approver:
+
+                hr_approver = await db.users.find_one(
+                    {
+                        "employee_id": str(
+                            manager_manager_id
+                        ),
+                        "is_active": True,
+                    }
+                )
+
+            # Only use the manager's manager if they are HR.
+            if (
+                hr_approver
+                and (
+                    hr_approver.get("role") or ""
+                ).strip().lower() == "hr"
+            ):
+                return hr_approver
+
+    # ------------------------------------------------------------------
+    # Fallback: any active HR user.
+    # ------------------------------------------------------------------
+
+    hr_user = await db.users.find_one(
+        {
+            "role": "hr",
+            "is_active": True,
+        }
+    )
+
+    return hr_user
+
+
+# ============================================================================
 # EMPLOYEE ACTIONS
 # ============================================================================
 
@@ -96,9 +245,10 @@ async def submit_leave(
         3. Validate leave request
         4. Calculate policy-aware chargeable days
         5. Determine approval route
-        6. Assign manager/HR workflow
-        7. Persist request
-        8. Notify workflow
+        6. Resolve manager
+        7. Resolve HR approver
+        8. Persist request
+        9. Notify workflow
     """
 
     db = get_db()
@@ -107,14 +257,21 @@ async def submit_leave(
     # EMPLOYEE ID
     # ----------------------------------------------------------------------
 
-    employee_id = employee.get("employee_id")
+    employee_id = employee.get(
+        "employee_id"
+    )
 
     if not employee_id:
+
         employee_id = str(
-            employee.get("_id", "")
+            employee.get(
+                "_id",
+                "",
+            )
         )
 
     if not employee_id:
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Employee ID is missing.",
@@ -129,6 +286,7 @@ async def submit_leave(
     )
 
     if not normalized_leave_type:
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Leave type is required.",
@@ -145,7 +303,11 @@ async def submit_leave(
         end_date=data.end_date,
     )
 
-    if not validation.get("valid", False):
+    if not validation.get(
+        "valid",
+        False,
+    ):
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=validation.get(
@@ -153,17 +315,6 @@ async def submit_leave(
                 "Leave request failed validation.",
             ),
         )
-
-    # IMPORTANT:
-    # requested_days comes from ValidationService.
-    # Therefore it respects:
-    #
-    #   - regional calendar
-    #   - weekends
-    #   - holidays
-    #   - policy day-count basis
-    #   - leave balance
-    #
 
     requested_days = int(
         validation.get(
@@ -173,6 +324,7 @@ async def submit_leave(
     )
 
     if requested_days <= 0:
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
@@ -189,10 +341,6 @@ async def submit_leave(
         requested_days
     )
 
-    current_approver = approval_route[
-        "current_approver"
-    ]
-
     # ----------------------------------------------------------------------
     # MANAGER ROUTING
     # ----------------------------------------------------------------------
@@ -201,7 +349,7 @@ async def submit_leave(
         "manager_id"
     )
 
-    # A manager is required for 1–5 day leave.
+    # Manager required for 1–5 day requests.
     #
     # If no manager exists, use HR as fallback.
 
@@ -227,15 +375,40 @@ async def submit_leave(
             )
 
         if fallback_user:
+
             manager_id = fallback_user["_id"]
 
         else:
+
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
                     "No manager assigned and no HR "
                     "fallback available. "
                     "Contact administrator."
+                ),
+            )
+
+    # ----------------------------------------------------------------------
+    # RESOLVE HR APPROVER
+    # ----------------------------------------------------------------------
+
+    hr_approver = None
+
+    if approval_route["requires_hr"]:
+
+        hr_approver = await _resolve_hr_approver(
+            db,
+            manager_id,
+        )
+
+        if not hr_approver:
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "No HR approver could be resolved "
+                    "for this leave request."
                 ),
             )
 
@@ -250,6 +423,14 @@ async def submit_leave(
     manager_oid = (
         _to_object_id(manager_id)
         if manager_id
+        else None
+    )
+
+    hr_approver_oid = (
+        _to_object_id(
+            hr_approver.get("_id")
+        )
+        if hr_approver
         else None
     )
 
@@ -288,15 +469,35 @@ async def submit_leave(
     )
 
     # ----------------------------------------------------------------------
+    # INITIAL APPROVER
+    # ----------------------------------------------------------------------
+
+    if approval_route["requires_manager"]:
+
+        initial_stage = "MANAGER"
+
+        initial_approver = manager_oid
+
+    else:
+
+        initial_stage = "HR"
+
+        initial_approver = hr_approver_oid
+
+    # ----------------------------------------------------------------------
     # INITIAL WORKFLOW STATE
     # ----------------------------------------------------------------------
 
     leave_dict = {
+
         # Employee
         "employee_id": employee_oid,
 
-        # Assigned manager where available
+        # Assigned manager
         "manager_id": manager_oid,
+
+        # Resolved HR approver
+        "hr_approver_id": hr_approver_oid,
 
         # Canonical leave type
         "leave_type": normalized_leave_type,
@@ -317,9 +518,14 @@ async def submit_leave(
         "status": "pending",
 
         # Approval workflow
-        "approval_stage": current_approver,
-        "current_approver": current_approver,
+        "approval_stage": initial_stage,
 
+        # IMPORTANT:
+        # This stores the actual user's MongoDB ID,
+        # not the string "MANAGER" or "HR".
+        "current_approver": initial_approver,
+
+        # Complete approval route
         "approval_route": {
             "requires_manager": (
                 approval_route["requires_manager"]
@@ -333,6 +539,8 @@ async def submit_leave(
             "final_approver": (
                 approval_route["final_approver"]
             ),
+            "manager_id": manager_oid,
+            "hr_approver_id": hr_approver_oid,
         },
 
         # Audit fields
@@ -363,6 +571,7 @@ async def submit_leave(
     )
 
     if leave_doc is None:
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=(
@@ -393,10 +602,6 @@ async def get_my_leaves(
     employee: dict,
     status_filter: str | None = None,
 ) -> LeaveListResponse:
-    """
-    Get all leave requests submitted by the
-    current employee.
-    """
 
     db = get_db()
 
@@ -449,9 +654,6 @@ async def get_leave_by_id(
     leave_id: str,
     user: dict,
 ) -> LeaveResponse:
-    """
-    Get a single leave request.
-    """
 
     leave_doc = await _get_leave_or_404(
         leave_id
@@ -475,12 +677,24 @@ async def get_leave_by_id(
         )
     )
 
+    doc_hr = str(
+        leave_doc.get(
+            "hr_approver_id",
+            "",
+        )
+    )
+
     if (
         doc_emp != user_id
         and doc_mgr != user_id
+        and doc_hr != user_id
         and user.get("role")
-        not in ["hr", "admin"]
+        not in [
+            "hr",
+            "admin",
+        ]
     ):
+
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=(
@@ -499,7 +713,9 @@ async def get_leave_by_id(
     return (
         items[0]
         if items
-        else _doc_to_response(leave_doc)
+        else _doc_to_response(
+            leave_doc
+        )
     )
 
 
@@ -512,12 +728,6 @@ async def cancel_leave(
     leave_id: str,
     employee: dict,
 ) -> LeaveResponse:
-    """
-    Cancel a pending leave request.
-
-    Only the employee who submitted the request
-    can cancel it.
-    """
 
     db = get_db()
 
@@ -534,6 +744,7 @@ async def cancel_leave(
         )
         != str(employee["_id"])
     ):
+
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=(
@@ -542,7 +753,10 @@ async def cancel_leave(
             ),
         )
 
-    if leave_doc.get("status") != "pending":
+    if leave_doc.get(
+        "status"
+    ) != "pending":
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
@@ -592,10 +806,10 @@ async def get_team_leaves(
     Get leave requests assigned to the current approver.
 
     Manager:
-        Sees requests assigned to that manager.
+        Sees requests currently assigned to that manager.
 
     HR:
-        Sees requests currently requiring HR review.
+        Sees requests specifically assigned to that HR user.
 
     Admin:
         Sees all requests.
@@ -609,6 +823,10 @@ async def get_team_leaves(
 
     mgr_id = manager["_id"]
 
+    # ------------------------------------------------------------------
+    # MANAGER
+    # ------------------------------------------------------------------
+
     if role == "manager":
 
         query = {
@@ -616,25 +834,44 @@ async def get_team_leaves(
                 {
                     "manager_id": mgr_id,
                     "approval_stage": "MANAGER",
+                    "current_approver": mgr_id,
                 },
                 {
                     "manager_id": str(mgr_id),
                     "approval_stage": "MANAGER",
+                    "current_approver": str(mgr_id),
                 },
             ]
         }
 
+    # ------------------------------------------------------------------
+    # HR
+    # ------------------------------------------------------------------
+
     elif role == "hr":
 
         query = {
-            "approval_stage": "HR"
+            "approval_stage": "HR",
+            "$or": [
+                {
+                    "current_approver": mgr_id
+                },
+                {
+                    "current_approver": str(mgr_id)
+                },
+            ],
         }
+
+    # ------------------------------------------------------------------
+    # ADMIN
+    # ------------------------------------------------------------------
 
     else:
 
         query = {}
 
     if status_filter:
+
         query["status"] = status_filter
 
     cursor = (
@@ -671,23 +908,6 @@ async def approve_leave(
     manager: dict,
     remarks: str | None = None,
 ) -> LeaveResponse:
-    """
-    Approve a leave request according to ApprovalService.
-
-    Workflow:
-
-        1–2 days:
-            Manager → APPROVED
-
-        3–5 days:
-            Manager → PENDING_HR
-            HR → APPROVED
-
-        6+ days:
-            HR → APPROVED
-
-    Balance is deducted ONLY after final approval.
-    """
 
     db = get_db()
 
@@ -763,10 +983,63 @@ async def approve_leave(
 
     if next_status == "pending_hr":
 
+        # --------------------------------------------------------------
+        # Resolve HR approver.
+        #
+        # For Sana:
+        #
+        # Sana.manager_id = Ravi
+        # Ravi.manager_id = Priya
+        #
+        # Therefore Priya becomes current_approver.
+        # --------------------------------------------------------------
+
+        hr_approver_oid = leave_doc.get(
+            "hr_approver_id"
+        )
+
+        if not hr_approver_oid:
+
+            hr_approver = await _resolve_hr_approver(
+                db,
+                leave_doc.get(
+                    "manager_id"
+                ),
+            )
+
+            if not hr_approver:
+
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        "Unable to resolve HR approver "
+                        "for this leave request."
+                    ),
+                )
+
+            hr_approver_oid = _to_object_id(
+                hr_approver.get("_id")
+            )
+
+            await db.leave_requests.update_one(
+                {
+                    "_id": leave_doc["_id"]
+                },
+                {
+                    "$set": {
+                        "hr_approver_id": hr_approver_oid
+                    }
+                },
+            )
+
         update_fields = {
             "status": "pending_hr",
             "approval_stage": "HR",
-            "current_approver": "HR",
+
+            # IMPORTANT:
+            # Actual HR user's ID.
+            "current_approver": hr_approver_oid,
+
             "updated_at": now,
         }
 
@@ -868,12 +1141,6 @@ async def reject_leave(
     manager: dict,
     remarks: str | None = None,
 ) -> LeaveResponse:
-    """
-    Reject a leave request.
-
-    Manager or HR can reject only when they are the
-    currently authorized approval tier.
-    """
 
     db = get_db()
 
@@ -1009,20 +1276,12 @@ def _validate_manager_action(
     leave_doc: dict,
     manager: dict,
 ) -> None:
-    """
-    Backward-compatible manager authorization helper.
-
-    This helper is retained because existing tests and parts of
-    the application import it directly.
-
-    It performs basic ownership/state validation first.
-
-    If the document contains enough information for the full
-    ApprovalService, the request is additionally validated there.
-    """
 
     manager_id = str(
-        manager.get("_id", "")
+        manager.get(
+            "_id",
+            "",
+        )
     )
 
     assigned_manager_id = str(
@@ -1036,7 +1295,12 @@ def _validate_manager_action(
     # REQUEST STATE
     # ----------------------------------------------------------------------
 
-    if leave_doc.get("status") != "pending":
+    if leave_doc.get(
+        "status"
+    ) not in [
+        "pending",
+        "pending_hr",
+    ]:
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1051,20 +1315,22 @@ def _validate_manager_action(
     # MANAGER OWNERSHIP
     # ----------------------------------------------------------------------
 
-    if assigned_manager_id != manager_id:
-
-        if manager.get("role") not in [
+    if (
+        assigned_manager_id != manager_id
+        and manager.get("role")
+        not in [
             "hr",
             "admin",
-        ]:
+        ]
+    ):
 
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=(
-                    "You are not the assigned manager "
-                    "for this leave request."
-                ),
-            )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "You are not the assigned manager "
+                "for this leave request."
+            ),
+        )
 
     # ----------------------------------------------------------------------
     # LEGACY DOCUMENT SUPPORT
@@ -1073,25 +1339,20 @@ def _validate_manager_action(
     has_duration = (
         leave_doc.get(
             "requested_days"
-        )
-        is not None
+        ) is not None
         or leave_doc.get(
             "total_days"
-        )
-        is not None
+        ) is not None
         or (
             leave_doc.get(
                 "start_date"
-            )
-            is not None
+            ) is not None
             and leave_doc.get(
                 "end_date"
-            )
-            is not None
+            ) is not None
         )
     )
 
-    # Old test/document without duration.
     if not has_duration:
         return
 
@@ -1104,7 +1365,10 @@ def _validate_manager_action(
         approver=manager,
     )
 
-    if authorization.get("allowed", False):
+    if authorization.get(
+        "allowed",
+        False,
+    ):
         return
 
     raise HTTPException(
@@ -1124,9 +1388,6 @@ def _validate_manager_action(
 async def _get_leave_or_404(
     leave_id: str,
 ) -> dict:
-    """
-    Fetch a leave request by MongoDB ObjectId.
-    """
 
     if not ObjectId.is_valid(
         leave_id
@@ -1159,13 +1420,15 @@ async def _get_leave_or_404(
     return doc
 
 
+# ============================================================================
+# BALANCE DEDUCTION
+# ============================================================================
+
+
 async def _deduct_leave_balance(
     db,
     leave_doc: dict,
 ) -> None:
-    """
-    Deduct leave balance ONLY after final approval.
-    """
 
     leave_type = (
         leave_doc.get(
@@ -1174,7 +1437,6 @@ async def _deduct_leave_balance(
         or ""
     ).strip().lower()
 
-    # Unpaid leave has no balance deduction.
     if leave_type == "unpaid":
         return
 
@@ -1237,19 +1499,19 @@ async def _deduct_leave_balance(
     )
 
 
+# ============================================================================
+# FIND EMPLOYEE
+# ============================================================================
+
+
 async def _find_employee(
     db,
     employee_ref,
 ) -> dict | None:
-    """
-    Find employee using either MongoDB ObjectId
-    or human-readable employee_id.
-    """
 
     if not employee_ref:
         return None
 
-    # Try MongoDB ObjectId.
     if isinstance(
         employee_ref,
         ObjectId,
@@ -1280,7 +1542,6 @@ async def _find_employee(
         if employee:
             return employee
 
-    # Try human-readable employee ID.
     return await db.users.find_one(
         {
             "employee_id": str(
@@ -1290,14 +1551,16 @@ async def _find_employee(
     )
 
 
+# ============================================================================
+# OBJECT ID HELPER
+# ============================================================================
+
+
 def _to_object_id(
     value,
 ):
     """
     Safely convert a value to ObjectId.
-
-    If the value is not a valid ObjectId string,
-    return the original value.
     """
 
     if value is None:
@@ -1329,9 +1592,6 @@ def _doc_to_response(
     doc: dict,
     employee_name_override: str | None = None,
 ) -> LeaveResponse:
-    """
-    Convert MongoDB leave document into LeaveResponse.
-    """
 
     start = doc.get(
         "start_date"
@@ -1366,7 +1626,9 @@ def _doc_to_response(
                 "manager_id"
             )
         )
-        if doc.get("manager_id")
+        if doc.get(
+            "manager_id"
+        )
         else None
     )
 
@@ -1394,19 +1656,31 @@ def _doc_to_response(
         total_days = 1
 
     applied_at = (
-        doc.get("applied_at")
-        or doc.get("created_at")
-        or datetime.now(timezone.utc)
+        doc.get(
+            "applied_at"
+        )
+        or doc.get(
+            "created_at"
+        )
+        or datetime.now(
+            timezone.utc
+        )
     )
 
     reviewed_at = (
-        doc.get("reviewed_at")
-        or doc.get("updated_at")
+        doc.get(
+            "reviewed_at"
+        )
+        or doc.get(
+            "updated_at"
+        )
     )
 
     emp_name = (
         employee_name_override
-        or doc.get("employee_name")
+        or doc.get(
+            "employee_name"
+        )
         or "Employee"
     )
 
@@ -1471,10 +1745,6 @@ async def _enrich_leaves_with_employee_names(
     leaves: list,
     db,
 ) -> list:
-    """
-    Enrich leave documents with employee names
-    from the users collection.
-    """
 
     if not leaves:
         return []
@@ -1495,7 +1765,9 @@ async def _enrich_leaves_with_employee_names(
             ObjectId,
         ):
 
-            emp_ids.append(eid)
+            emp_ids.append(
+                eid
+            )
 
         else:
 

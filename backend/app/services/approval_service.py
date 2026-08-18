@@ -18,8 +18,6 @@ Database operations use Motor through get_db().
 Do NOT introduce PyMongo here.
 """
 
-from typing import Optional
-
 from app.core.database import get_db
 
 
@@ -50,27 +48,18 @@ class ApprovalService:
     def determine_approval_route(
         total_days: int,
     ) -> dict:
-        """
-        Determine the approval route for a leave request.
-
-        Rules:
-
-            1-2 days:
-                Manager only
-
-            3-5 days:
-                Manager -> HR
-
-            6+ days:
-                HR directly
-        """
 
         if total_days <= 0:
             raise ValueError(
                 "Leave duration must be greater than zero."
             )
 
+        # -----------------------------------------------------
+        # 1-2 DAYS
+        # -----------------------------------------------------
+
         if total_days <= ApprovalService.MANAGER_MAX_DAYS:
+
             return {
                 "current_approver": "MANAGER",
                 "final_approver": "MANAGER",
@@ -79,7 +68,12 @@ class ApprovalService:
                 "approval_levels": 1,
             }
 
+        # -----------------------------------------------------
+        # 3-5 DAYS
+        # -----------------------------------------------------
+
         if total_days < ApprovalService.HR_DIRECT_START_DAYS:
+
             return {
                 "current_approver": "MANAGER",
                 "final_approver": "HR",
@@ -87,6 +81,10 @@ class ApprovalService:
                 "requires_hr": True,
                 "approval_levels": 2,
             }
+
+        # -----------------------------------------------------
+        # 6+ DAYS
+        # -----------------------------------------------------
 
         return {
             "current_approver": "HR",
@@ -105,17 +103,6 @@ class ApprovalService:
         leave_request: dict,
         approver: dict,
     ) -> dict:
-        """
-        Determine whether a user is authorized to review
-        the leave request at its current approval stage.
-
-        Returns:
-
-            {
-                "allowed": True/False,
-                "reason": "..."
-            }
-        """
 
         if not leave_request:
             return {
@@ -133,12 +120,29 @@ class ApprovalService:
             approver.get("role") or ""
         ).strip().lower()
 
+        approver_id = approver.get("_id")
+
+        approver_id_str = str(
+            approver_id
+        )
+
         status = (
             leave_request.get("status") or ""
         ).strip().lower()
 
+        current_approver = leave_request.get(
+            "current_approver"
+        )
+
+        current_approver_str = (
+            str(current_approver)
+            if current_approver
+            else None
+        )
+
         total_days = (
             leave_request.get("total_days")
+            or leave_request.get("requested_days")
             or ApprovalService._calculate_total_days(
                 leave_request
             )
@@ -148,15 +152,16 @@ class ApprovalService:
             int(total_days)
         )
 
-        # -----------------------------------------------------
-        # ALREADY FINALIZED
-        # -----------------------------------------------------
+        # =====================================================
+        # FINALIZED REQUEST
+        # =====================================================
 
         if status in {
             "approved",
             "rejected",
             "cancelled",
         }:
+
             return {
                 "allowed": False,
                 "reason": (
@@ -165,11 +170,15 @@ class ApprovalService:
                 ),
             }
 
-        # -----------------------------------------------------
-        # MANAGER APPROVAL
-        # -----------------------------------------------------
+        # =====================================================
+        # PENDING
+        # =====================================================
 
         if status == "pending":
+
+            # -------------------------------------------------
+            # MANAGER
+            # -------------------------------------------------
 
             if role == "manager":
 
@@ -177,11 +186,8 @@ class ApprovalService:
                     "manager_id"
                 )
 
-                approver_id = approver.get(
-                    "_id"
-                )
+                if str(manager_id) != approver_id_str:
 
-                if str(manager_id) != str(approver_id):
                     return {
                         "allowed": False,
                         "reason": (
@@ -191,11 +197,26 @@ class ApprovalService:
                     }
 
                 if not route["requires_manager"]:
+
                     return {
                         "allowed": False,
                         "reason": (
                             "This leave request is routed "
                             "directly to HR."
+                        ),
+                    }
+
+                if (
+                    current_approver
+                    and current_approver_str
+                    != approver_id_str
+                ):
+
+                    return {
+                        "allowed": False,
+                        "reason": (
+                            "You are not the current "
+                            "approver for this leave request."
                         ),
                     }
 
@@ -207,9 +228,14 @@ class ApprovalService:
                     ),
                 }
 
+            # -------------------------------------------------
+            # DIRECT HR — 6+ DAYS
+            # -------------------------------------------------
+
             if role == "hr":
 
                 if route["requires_manager"]:
+
                     return {
                         "allowed": False,
                         "reason": (
@@ -221,12 +247,17 @@ class ApprovalService:
                 return {
                     "allowed": True,
                     "reason": (
-                        "HR is authorized to review "
-                        "this request."
+                        "HR is authorized to "
+                        "review this request."
                     ),
                 }
 
+            # -------------------------------------------------
+            # ADMIN
+            # -------------------------------------------------
+
             if role == "admin":
+
                 return {
                     "allowed": True,
                     "reason": "Administrator override.",
@@ -240,13 +271,27 @@ class ApprovalService:
                 ),
             }
 
-        # -----------------------------------------------------
-        # HR SECOND-TIER APPROVAL
-        # -----------------------------------------------------
+        # =====================================================
+        # PENDING HR
+        # =====================================================
 
         if status == "pending_hr":
 
-            if role in {"hr", "admin"}:
+            # -------------------------------------------------
+            # HR SECOND-TIER APPROVAL
+            #
+            # IMPORTANT:
+            #
+            # Any authenticated HR user can perform
+            # the HR approval action.
+            #
+            # This avoids blocking the workflow because
+            # current_approver contains an outdated/mismatched
+            # user ID.
+            # -------------------------------------------------
+
+            if role == "hr":
+
                 return {
                     "allowed": True,
                     "reason": (
@@ -254,6 +299,21 @@ class ApprovalService:
                         "second approval tier."
                     ),
                 }
+
+            # -------------------------------------------------
+            # ADMIN
+            # -------------------------------------------------
+
+            if role == "admin":
+
+                return {
+                    "allowed": True,
+                    "reason": "Administrator override.",
+                }
+
+            # -------------------------------------------------
+            # OTHER ROLES
+            # -------------------------------------------------
 
             return {
                 "allowed": False,
@@ -263,9 +323,9 @@ class ApprovalService:
                 ),
             }
 
-        # -----------------------------------------------------
+        # =====================================================
         # UNKNOWN STATUS
-        # -----------------------------------------------------
+        # =====================================================
 
         return {
             "allowed": False,
@@ -279,27 +339,11 @@ class ApprovalService:
     # NEXT STATUS
     # =========================================================
 
+    @staticmethod
     def get_next_status(
-    leave_request: dict,
-    approver_role: str,
-) -> str:
-        """
-        Determine the status after an approval action.
-
-        Examples:
-
-            2 days + manager
-                -> approved
-
-            3 days + manager
-                -> pending_hr
-
-            3 days + HR
-                -> approved
-
-            6 days + HR
-                -> approved
-        """
+        leave_request: dict,
+        approver_role: str,
+    ) -> str:
 
         if not leave_request:
             raise ValueError(
@@ -317,6 +361,7 @@ class ApprovalService:
 
         total_days = (
             leave_request.get("total_days")
+            or leave_request.get("requested_days")
             or ApprovalService._calculate_total_days(
                 leave_request
             )
@@ -326,54 +371,66 @@ class ApprovalService:
             int(total_days)
         )
 
-        # -----------------------------------------------------
-        # ADMIN OVERRIDE
-        # -----------------------------------------------------
-
-        
-
-        # -----------------------------------------------------
+        # =====================================================
         # MANAGER
-        # -----------------------------------------------------
+        # =====================================================
 
         if role == "manager":
 
             if current_status != "pending":
+
                 raise ValueError(
                     "Manager can only review "
                     "a pending request."
                 )
 
             if not route["requires_manager"]:
+
                 raise ValueError(
                     "This request is routed directly "
                     "to HR."
                 )
 
             if route["requires_hr"]:
+
                 return "pending_hr"
 
             return "approved"
 
-        # -----------------------------------------------------
+        # =====================================================
         # HR
-        # -----------------------------------------------------
+        # =====================================================
 
         if role == "hr":
 
+            # -------------------------------------------------
+            # SECOND-TIER HR
+            # -------------------------------------------------
+
             if current_status == "pending_hr":
+
                 return "approved"
+
+            # -------------------------------------------------
+            # DIRECT HR
+            # -------------------------------------------------
 
             if (
                 current_status == "pending"
                 and not route["requires_manager"]
             ):
+
                 return "approved"
+
+            # -------------------------------------------------
+            # MANAGER REQUIRED
+            # -------------------------------------------------
 
             if (
                 current_status == "pending"
                 and route["requires_manager"]
             ):
+
                 raise ValueError(
                     "Manager approval is required "
                     "before HR approval."
@@ -384,9 +441,9 @@ class ApprovalService:
                 f"from status '{current_status}'."
             )
 
-        # -----------------------------------------------------
+        # =====================================================
         # ADMIN
-        # -----------------------------------------------------
+        # =====================================================
 
         if role == "admin":
 
@@ -394,6 +451,7 @@ class ApprovalService:
                 "pending",
                 "pending_hr",
             }:
+
                 return "approved"
 
         raise ValueError(
@@ -410,9 +468,6 @@ class ApprovalService:
         leave_request: dict,
         approver_role: str,
     ) -> str:
-        """
-        Validate a rejection action and return REJECTED.
-        """
 
         if not leave_request:
             raise ValueError(
@@ -432,6 +487,7 @@ class ApprovalService:
             "pending",
             "pending_hr",
         }:
+
             raise ValueError(
                 "Only pending leave requests "
                 "can be rejected."
@@ -442,6 +498,7 @@ class ApprovalService:
             "hr",
             "admin",
         }:
+
             raise ValueError(
                 "User is not authorized to "
                 "reject leave requests."
@@ -457,13 +514,6 @@ class ApprovalService:
     def _calculate_total_days(
         leave_request: dict,
     ) -> int:
-        """
-        Calculate inclusive calendar days when total_days
-        is not stored on the request.
-
-        Validation Engine should normally provide the
-        policy-aware charged leave days.
-        """
 
         start_date = leave_request.get(
             "start_date"
@@ -473,16 +523,28 @@ class ApprovalService:
             "end_date"
         )
 
-        if start_date is None or end_date is None:
+        if (
+            start_date is None
+            or end_date is None
+        ):
+
             raise ValueError(
                 "Leave request does not contain "
                 "a valid duration."
             )
 
-        if hasattr(start_date, "date"):
+        if hasattr(
+            start_date,
+            "date",
+        ):
+
             start_date = start_date.date()
 
-        if hasattr(end_date, "date"):
+        if hasattr(
+            end_date,
+            "date",
+        ):
+
             end_date = end_date.date()
 
         return (
