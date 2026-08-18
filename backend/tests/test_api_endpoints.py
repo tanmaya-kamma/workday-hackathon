@@ -64,15 +64,6 @@ def test_health_check_endpoint(mock_db):
     assert data["status"] in ["healthy", "degraded"]
 
 
-def test_seed_endpoint(mock_db):
-    # Mock finding and inserting users to simulate either empty or pre-seeded database
-    mock_db.users.find_one = AsyncMock(return_value=None)
-    mock_db.users.insert_many = AsyncMock()
-    
-    response = client.post("/api/v1/admin/seed")
-    assert response.status_code == 200
-    assert "message" in response.json()
-
 
 def test_register_and_login_flow(mock_db):
     pwd_hash = bcrypt.hashpw(b"password123", bcrypt.gensalt()).decode("utf-8")

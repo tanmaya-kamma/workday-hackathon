@@ -65,14 +65,6 @@ async def login_user(data: UserLogin) -> TokenResponse:
 
     identifier = data.email.strip()
 
-    # Debug: check what DB and collection we're hitting
-    user_count = await db.users.count_documents({})
-    sample = await db.users.find_one()
-    logger.info("LOGIN DEBUG — db=%s, users count=%d, sample email=%s, looking for=%s",
-                db.name, user_count,
-                sample.get("email") if sample else "NO DOCS",
-                identifier)
-
     user_doc = await db.users.find_one({
         "$or": [
             {"email": identifier.lower()},
