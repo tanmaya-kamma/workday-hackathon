@@ -11,7 +11,6 @@ from bson import ObjectId
 from fastapi import HTTPException, status
 
 from app.core.database import get_db
-from app.core.cache import cache_delete
 from app.models.leave import LeaveRequestInDB
 from app.schemas.leave import LeaveResponse, LeaveListResponse
 from app.schemas.leave import LeaveCreate
@@ -123,7 +122,7 @@ async def submit_leave(data: LeaveCreate, employee: dict) -> LeaveResponse:
     leave_doc = await db.leave_requests.find_one({"_id": result.inserted_id})
 
     # Invalidate HR stats cache.
-    await cache_delete("hr:statistics")
+
 
     # Notify manager
     await notify_leave_submitted(leave_doc, employee)
@@ -195,7 +194,7 @@ async def cancel_leave(leave_id: str, employee: dict) -> LeaveResponse:
         {"$set": {"status": "cancelled", "updated_at": datetime.now(timezone.utc)}},
     )
 
-    await cache_delete("hr:statistics")
+
     updated = await db.leave_requests.find_one({"_id": leave_doc["_id"]})
     return _doc_to_response(updated)
 
@@ -270,7 +269,7 @@ async def approve_leave(leave_id: str, manager: dict, remarks: str | None = None
         },
     )
 
-    await cache_delete("hr:statistics")
+
     updated = await db.leave_requests.find_one({"_id": leave_doc["_id"]})
 
     # Fetch employee doc for notification
@@ -302,7 +301,7 @@ async def reject_leave(leave_id: str, manager: dict, remarks: str | None = None)
         },
     )
 
-    await cache_delete("hr:statistics")
+
     updated = await db.leave_requests.find_one({"_id": leave_doc["_id"]})
 
     emp_ref = leave_doc.get("employee_id")

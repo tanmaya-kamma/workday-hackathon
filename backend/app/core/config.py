@@ -27,14 +27,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 480  # 8 hours
 
-    # -- Redis (optional) --
-    redis_url: str = "redis://localhost:6379/0"
-
     # -- CORS --
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
-
-    # -- Celery (optional) --
-    celery_broker_url: str = "redis://localhost:6379/1"
 
     @property
     def cors_origins_list(self) -> List[str]:

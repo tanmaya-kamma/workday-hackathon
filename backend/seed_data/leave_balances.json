@@ -1,0 +1,258 @@
+[
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80001" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60001" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 30, "used": 4,  "remaining": 26 },
+      "sick":     { "total": 12, "used": 0,  "remaining": 12 },
+      "personal": { "total": 6,  "used": 1,  "remaining": 5 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80002" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60002" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 30, "used": 3,  "remaining": 27 },
+      "sick":     { "total": 12, "used": 1,  "remaining": 11 },
+      "personal": { "total": 6,  "used": 0,  "remaining": 6 }
+    }
+  },
+
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80003" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60101" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 24, "used": 6,  "remaining": 18 },
+      "sick":     { "total": 12, "used": 1,  "remaining": 11 },
+      "personal": { "total": 6,  "used": 2,  "remaining": 4 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80004" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60102" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 24, "used": 5,  "remaining": 19 },
+      "sick":     { "total": 12, "used": 0,  "remaining": 12 },
+      "personal": { "total": 6,  "used": 3,  "remaining": 3 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80005" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60103" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 24, "used": 4,  "remaining": 20 },
+      "sick":     { "total": 12, "used": 2,  "remaining": 10 },
+      "personal": { "total": 6,  "used": 1,  "remaining": 5 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80006" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60104" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 24, "used": 8,  "remaining": 16 },
+      "sick":     { "total": 12, "used": 0,  "remaining": 12 },
+      "personal": { "total": 6,  "used": 2,  "remaining": 4 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80007" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60105" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 24, "used": 3,  "remaining": 21 },
+      "sick":     { "total": 12, "used": 1,  "remaining": 11 },
+      "personal": { "total": 6,  "used": 1,  "remaining": 5 }
+    }
+  },
+
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80008" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60201" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 24, "used": 10, "remaining": 14 },
+      "sick":     { "total": 12, "used": 2,  "remaining": 10 },
+      "personal": { "total": 6,  "used": 3,  "remaining": 3 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80009" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60202" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 24, "used": 5,  "remaining": 19 },
+      "sick":     { "total": 12, "used": 0,  "remaining": 12 },
+      "personal": { "total": 6,  "used": 2,  "remaining": 4 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b8000a" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60203" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 18, "used": 8,  "remaining": 10 },
+      "sick":     { "total": 12, "used": 3,  "remaining": 9 },
+      "personal": { "total": 6,  "used": 4,  "remaining": 2 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b8000b" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60204" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 18, "used": 2,  "remaining": 16 },
+      "sick":     { "total": 12, "used": 1,  "remaining": 11 },
+      "personal": { "total": 6,  "used": 0,  "remaining": 6 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b8000c" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60205" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 18, "used": 3,  "remaining": 15 },
+      "sick":     { "total": 12, "used": 0,  "remaining": 12 },
+      "personal": { "total": 6,  "used": 1,  "remaining": 5 }
+    }
+  },
+
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b8000d" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60206" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 24, "used": 7,  "remaining": 17 },
+      "sick":     { "total": 12, "used": 1,  "remaining": 11 },
+      "personal": { "total": 6,  "used": 2,  "remaining": 4 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b8000e" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60207" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 18, "used": 6,  "remaining": 12 },
+      "sick":     { "total": 12, "used": 3,  "remaining": 9 },
+      "personal": { "total": 6,  "used": 4,  "remaining": 2 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b8000f" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60208" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 18, "used": 1,  "remaining": 17 },
+      "sick":     { "total": 12, "used": 0,  "remaining": 12 },
+      "personal": { "total": 6,  "used": 0,  "remaining": 6 }
+    }
+  },
+
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80010" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60209" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 24, "used": 12, "remaining": 12 },
+      "sick":     { "total": 12, "used": 2,  "remaining": 10 },
+      "personal": { "total": 6,  "used": 5,  "remaining": 1 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80011" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b6020a" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 18, "used": 4,  "remaining": 14 },
+      "sick":     { "total": 12, "used": 1,  "remaining": 11 },
+      "personal": { "total": 6,  "used": 2,  "remaining": 4 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80012" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b6020b" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 18, "used": 7,  "remaining": 11 },
+      "sick":     { "total": 12, "used": 4,  "remaining": 8 },
+      "personal": { "total": 6,  "used": 3,  "remaining": 3 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80013" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b6020c" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 18, "used": 2,  "remaining": 16 },
+      "sick":     { "total": 12, "used": 0,  "remaining": 12 },
+      "personal": { "total": 6,  "used": 1,  "remaining": 5 }
+    }
+  },
+
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80014" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b6020d" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 24, "used": 9,  "remaining": 15 },
+      "sick":     { "total": 12, "used": 2,  "remaining": 10 },
+      "personal": { "total": 6,  "used": 4,  "remaining": 2 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80015" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b6020e" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 18, "used": 5,  "remaining": 13 },
+      "sick":     { "total": 12, "used": 1,  "remaining": 11 },
+      "personal": { "total": 6,  "used": 3,  "remaining": 3 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80016" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b6020f" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 18, "used": 1,  "remaining": 17 },
+      "sick":     { "total": 12, "used": 0,  "remaining": 12 },
+      "personal": { "total": 6,  "used": 0,  "remaining": 6 }
+    }
+  },
+
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80017" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60210" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 24, "used": 6,  "remaining": 18 },
+      "sick":     { "total": 12, "used": 2,  "remaining": 10 },
+      "personal": { "total": 6,  "used": 3,  "remaining": 3 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80018" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60211" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 18, "used": 4,  "remaining": 14 },
+      "sick":     { "total": 12, "used": 1,  "remaining": 11 },
+      "personal": { "total": 6,  "used": 2,  "remaining": 4 }
+    }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5b80019" },
+    "user_id": { "$oid": "6683a1b0c1d2e3f4a5b60212" },
+    "year": 2026,
+    "balances": {
+      "vacation": { "total": 18, "used": 0,  "remaining": 18 },
+      "sick":     { "total": 12, "used": 0,  "remaining": 12 },
+      "personal": { "total": 6,  "used": 0,  "remaining": 6 }
+    }
+  }
+]

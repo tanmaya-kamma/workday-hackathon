@@ -12,7 +12,6 @@ from app.core.database import get_db
 from datetime import datetime
 from fastapi import HTTPException, status
 from app.core.security import hash_password
-from app.core.cache import cache_delete
 from app.schemas.user import UserProfile
 from app.schemas.leave import LeaveResponse, LeaveListResponse
 from app.schemas.hr import HRDashboardStats, LeaveTypeDistribution, CreateEmployeeRequest
@@ -130,8 +129,6 @@ async def create_employee(data: CreateEmployeeRequest) -> UserProfile:
         "updated_at": datetime.utcnow(),
     }
     await db.leave_balances.insert_one(balance_doc)
-
-    await cache_delete("hr:statistics")
 
     return await _doc_to_profile(user_doc)
 

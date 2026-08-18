@@ -4,11 +4,14 @@ Auth service — registration and login business logic.
 Uses Motor (PyMongo async) directly for all database operations, compatible with LMS database schema.
 """
 
+import logging
 from datetime import datetime
 from bson import ObjectId
 from fastapi import HTTPException, status
 
 from app.core.database import get_db
+
+logger = logging.getLogger(__name__)
 from app.core.security import hash_password, verify_password, create_access_token
 from app.models.user import UserInDB, LeaveBalance
 from app.schemas.user import UserRegister, UserLogin, TokenResponse, UserProfile, LeaveBalanceResponse
@@ -61,6 +64,15 @@ async def login_user(data: UserLogin) -> TokenResponse:
     db = get_db()
 
     identifier = data.email.strip()
+
+    # Debug: check what DB and collection we're hitting
+    user_count = await db.users.count_documents({})
+    sample = await db.users.find_one()
+    logger.info("LOGIN DEBUG — db=%s, users count=%d, sample email=%s, looking for=%s",
+                db.name, user_count,
+                sample.get("email") if sample else "NO DOCS",
+                identifier)
+
     user_doc = await db.users.find_one({
         "$or": [
             {"email": identifier.lower()},

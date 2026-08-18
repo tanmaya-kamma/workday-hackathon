@@ -1,0 +1,87 @@
+[
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5ba0001" },
+    "region": "IN",
+    "year": 2026,
+    "holidays": [
+      { "date": "2026-01-26", "name": "Republic Day" },
+      { "date": "2026-03-10", "name": "Maha Shivaratri" },
+      { "date": "2026-03-17", "name": "Holi" },
+      { "date": "2026-03-31", "name": "Id-ul-Fitr" },
+      { "date": "2026-04-03", "name": "Good Friday" },
+      { "date": "2026-04-14", "name": "Dr. Ambedkar Jayanti" },
+      { "date": "2026-05-01", "name": "May Day" },
+      { "date": "2026-06-07", "name": "Id-ul-Adha" },
+      { "date": "2026-08-15", "name": "Independence Day" },
+      { "date": "2026-08-25", "name": "Janmashtami" },
+      { "date": "2026-10-02", "name": "Gandhi Jayanti" },
+      { "date": "2026-10-20", "name": "Dussehra" },
+      { "date": "2026-11-09", "name": "Diwali" },
+      { "date": "2026-11-10", "name": "Diwali Holiday" },
+      { "date": "2026-11-16", "name": "Guru Nanak Jayanti" },
+      { "date": "2026-12-25", "name": "Christmas" }
+    ],
+    "weekend_days": [6, 7],
+    "uploaded_by": { "$oid": "6683a1b0c1d2e3f4a5b60001" },
+    "uploaded_at": { "$date": "2025-12-15T10:00:00Z" }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5ba0002" },
+    "region": "UK",
+    "year": 2026,
+    "holidays": [
+      { "date": "2026-01-01", "name": "New Year's Day" },
+      { "date": "2026-04-03", "name": "Good Friday" },
+      { "date": "2026-04-06", "name": "Easter Monday" },
+      { "date": "2026-05-04", "name": "Early May Bank Holiday" },
+      { "date": "2026-05-25", "name": "Spring Bank Holiday" },
+      { "date": "2026-08-31", "name": "Summer Bank Holiday" },
+      { "date": "2026-12-25", "name": "Christmas Day" },
+      { "date": "2026-12-28", "name": "Boxing Day (substitute)" }
+    ],
+    "weekend_days": [6, 7],
+    "uploaded_by": { "$oid": "6683a1b0c1d2e3f4a5b60001" },
+    "uploaded_at": { "$date": "2025-12-15T10:30:00Z" }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5ba0003" },
+    "region": "US",
+    "year": 2026,
+    "holidays": [
+      { "date": "2026-01-01", "name": "New Year's Day" },
+      { "date": "2026-01-19", "name": "Martin Luther King Jr. Day" },
+      { "date": "2026-02-16", "name": "Presidents' Day" },
+      { "date": "2026-05-25", "name": "Memorial Day" },
+      { "date": "2026-07-03", "name": "Independence Day (observed)" },
+      { "date": "2026-09-07", "name": "Labor Day" },
+      { "date": "2026-11-26", "name": "Thanksgiving Day" },
+      { "date": "2026-11-27", "name": "Day after Thanksgiving" },
+      { "date": "2026-12-25", "name": "Christmas Day" }
+    ],
+    "weekend_days": [6, 7],
+    "uploaded_by": { "$oid": "6683a1b0c1d2e3f4a5b60002" },
+    "uploaded_at": { "$date": "2025-12-16T09:00:00Z" }
+  },
+  {
+    "_id": { "$oid": "6683a1b0c1d2e3f4a5ba0004" },
+    "region": "ME",
+    "year": 2026,
+    "holidays": [
+      { "date": "2026-01-01", "name": "New Year's Day" },
+      { "date": "2026-03-31", "name": "Eid al-Fitr" },
+      { "date": "2026-04-01", "name": "Eid al-Fitr Holiday" },
+      { "date": "2026-04-02", "name": "Eid al-Fitr Holiday" },
+      { "date": "2026-06-07", "name": "Eid al-Adha" },
+      { "date": "2026-06-08", "name": "Eid al-Adha Holiday" },
+      { "date": "2026-06-09", "name": "Eid al-Adha Holiday" },
+      { "date": "2026-06-27", "name": "Islamic New Year" },
+      { "date": "2026-09-05", "name": "Prophet's Birthday" },
+      { "date": "2026-11-30", "name": "Commemoration Day" },
+      { "date": "2026-12-01", "name": "National Day" },
+      { "date": "2026-12-02", "name": "National Day Holiday" }
+    ],
+    "weekend_days": [5, 6],
+    "uploaded_by": { "$oid": "6683a1b0c1d2e3f4a5b60002" },
+    "uploaded_at": { "$date": "2025-12-16T11:00:00Z" }
+  }
+]
