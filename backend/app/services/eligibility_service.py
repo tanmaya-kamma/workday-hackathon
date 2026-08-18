@@ -102,8 +102,21 @@ class EligibilityService:
         # NORMALIZE INPUT
         # -----------------------------------------------------
 
-        employee_id = employee_id.strip()
-        leave_type = leave_type.strip().upper()
+        employee_id = (
+            employee_id.strip()
+            if isinstance(employee_id, str)
+            else ""
+        )
+
+        leave_type = (
+            leave_type.strip().upper()
+            if isinstance(leave_type, str)
+            else ""
+        )
+
+        # -----------------------------------------------------
+        # BASIC INPUT VALIDATION
+        # -----------------------------------------------------
 
         if not employee_id:
             return {
@@ -150,7 +163,9 @@ class EligibilityService:
                 "leave_type": leave_type,
                 "usable_balance": 0.0,
                 "requested_days": float(requested_days),
-                "reason": f"Employee {employee_id} not found."
+                "reason": (
+                    f"Employee {employee_id} not found."
+                )
             }
 
         # -----------------------------------------------------
@@ -171,19 +186,38 @@ class EligibilityService:
         # POLICY CHECK
         # -----------------------------------------------------
 
-        policy = EligibilityService.get_policy(
-            leave_type,
-            as_of_date
-        )
+        try:
 
-        if policy is None:
+            policy = EligibilityService.get_policy(
+                leave_type,
+                as_of_date
+            )
+
+        except ValueError as exc:
+
             return {
                 "eligible": False,
                 "employee_id": employee_id,
                 "leave_type": leave_type,
                 "usable_balance": 0.0,
                 "requested_days": float(requested_days),
-                "reason": f"No active policy found for {leave_type}."
+                "reason": (
+                    f"Policy validation failed: {str(exc)}"
+                )
+            }
+
+        if policy is None:
+
+            return {
+                "eligible": False,
+                "employee_id": employee_id,
+                "leave_type": leave_type,
+                "usable_balance": 0.0,
+                "requested_days": float(requested_days),
+                "reason": (
+                    f"No active policy found for "
+                    f"{leave_type}."
+                )
             }
 
         # -----------------------------------------------------
@@ -208,7 +242,10 @@ class EligibilityService:
                 "leave_type": leave_type,
                 "usable_balance": 0.0,
                 "requested_days": float(requested_days),
-                "reason": f"Unable to calculate leave balance: {str(exc)}"
+                "reason": (
+                    "Unable to calculate leave balance: "
+                    f"{str(exc)}"
+                )
             }
 
         usable_balance = float(
@@ -233,7 +270,7 @@ class EligibilityService:
                     "usable_balance": usable_balance,
                     "requested_days": float(requested_days),
                     "reason": (
-                        f"Insufficient usable balance. "
+                        "Insufficient usable balance. "
                         f"Available: {usable_balance} days."
                     )
                 }
@@ -248,5 +285,7 @@ class EligibilityService:
             "leave_type": leave_type,
             "usable_balance": usable_balance,
             "requested_days": float(requested_days),
-            "reason": "Employee is eligible for this leave type."
+            "reason": (
+                "Employee is eligible for this leave type."
+            )
         }
