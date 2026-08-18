@@ -1,12 +1,12 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext.jsx';
-import { useLeave } from '../../context/LeaveContext.jsx';
-import { Card } from '../../components/common/Card.jsx';
-import { Button } from '../../components/common/Button.jsx';
-import { Badge } from '../../components/common/Badge.jsx';
-import { LeaveDetailsModal } from '../../components/common/LeaveDetailsModal.jsx';
-import { EmptyState } from '../../components/common/EmptyState.jsx';
+import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { useLeave } from "../../context/LeaveContext.jsx";
+import { Card } from "../../components/common/Card.jsx";
+import { Button } from "../../components/common/Button.jsx";
+import { Badge } from "../../components/common/Badge.jsx";
+import { LeaveDetailsModal } from "../../components/common/LeaveDetailsModal.jsx";
+import { EmptyState } from "../../components/common/EmptyState.jsx";
 
 export function MyRequestsPage() {
   const navigate = useNavigate();
@@ -18,11 +18,11 @@ export function MyRequestsPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   // Filters & Search
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortField, setSortField] = useState('date');
-  const [sortOrder, setSortOrder] = useState('desc');
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortField, setSortField] = useState("date");
+  const [sortOrder, setSortOrder] = useState("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
 
@@ -33,10 +33,16 @@ export function MyRequestsPage() {
   const counts = useMemo(() => {
     return {
       all: myRequests.length,
-      draft: myRequests.filter((r) => r.status === 'draft').length,
-      pending: myRequests.filter((r) => r.status === 'pending').length,
-      approved: myRequests.filter((r) => r.status === 'approved').length,
-      rejected: myRequests.filter((r) => r.status === 'rejected').length,
+      draft: myRequests.filter((r) => r.status === "draft").length,
+
+      // Both manager-pending and HR-pending are active requests.
+      pending: myRequests.filter(
+        (r) => r.status === "pending" || r.status === "pending_hr",
+      ).length,
+
+      approved: myRequests.filter((r) => r.status === "approved").length,
+
+      rejected: myRequests.filter((r) => r.status === "rejected").length,
     };
   }, [myRequests]);
 
@@ -45,11 +51,21 @@ export function MyRequestsPage() {
     return myRequests
       .filter((req) => {
         // Status filter
-        if (statusFilter !== 'all' && req.status !== statusFilter) {
-          return false;
+        if (statusFilter !== "all") {
+          if (
+            statusFilter === "pending" &&
+            req.status !== "pending" &&
+            req.status !== "pending_hr"
+          ) {
+            return false;
+          }
+
+          if (statusFilter !== "pending" && req.status !== statusFilter) {
+            return false;
+          }
         }
         // Type filter
-        if (typeFilter !== 'all' && req.typeKey !== typeFilter) {
+        if (typeFilter !== "all" && req.typeKey !== typeFilter) {
           return false;
         }
         // Search query
@@ -64,16 +80,16 @@ export function MyRequestsPage() {
       })
       .sort((a, b) => {
         let compare = 0;
-        if (sortField === 'date') {
-          const dateA = a.startDate || a.submittedAt || '';
-          const dateB = b.startDate || b.submittedAt || '';
+        if (sortField === "date") {
+          const dateA = a.startDate || a.submittedAt || "";
+          const dateB = b.startDate || b.submittedAt || "";
           compare = dateA.localeCompare(dateB);
-        } else if (sortField === 'duration') {
+        } else if (sortField === "duration") {
           compare = (a.durationDays || 0) - (b.durationDays || 0);
-        } else if (sortField === 'status') {
-          compare = (a.status || '').localeCompare(b.status || '');
+        } else if (sortField === "status") {
+          compare = (a.status || "").localeCompare(b.status || "");
         }
-        return sortOrder === 'desc' ? -compare : compare;
+        return sortOrder === "desc" ? -compare : compare;
       });
   }, [myRequests, statusFilter, typeFilter, searchQuery, sortField, sortOrder]);
 
@@ -85,7 +101,10 @@ export function MyRequestsPage() {
   }, [filteredRequests, currentPage]);
 
   const handleEditDraft = (req) => {
-    const editPath = role === 'manager' ? `/manager/request-leave?id=${req.id}` : `/employee/request-leave?id=${req.id}`;
+    const editPath =
+      role === "manager"
+        ? `/manager/request-leave?id=${req.id}`
+        : `/employee/request-leave?id=${req.id}`;
     navigate(editPath);
   };
 
@@ -98,7 +117,7 @@ export function MyRequestsPage() {
 
   const handleConfirmCancel = () => {
     if (cancelTarget) {
-      cancelLeaveRequest(cancelTarget.id, 'Cancelled by user from My Leave');
+      cancelLeaveRequest(cancelTarget.id, "Cancelled by user from My Leave");
       setCancelTarget(null);
     }
   };
@@ -112,14 +131,18 @@ export function MyRequestsPage() {
             My Leave Requests
           </h1>
           <p className="text-xs sm:text-sm text-[#687781] mt-0.5">
-            Track, filter, edit drafts, and view approval timelines for all your leave applications.
+            Track, filter, edit drafts, and view approval timelines for all your
+            leave applications.
           </p>
         </div>
         <Button
           variant="primary"
           icon="add"
           onClick={() => {
-            const reqPath = role === 'manager' ? '/manager/request-leave' : '/employee/request-leave';
+            const reqPath =
+              role === "manager"
+                ? "/manager/request-leave"
+                : "/employee/request-leave";
             navigate(reqPath);
           }}
         >
@@ -132,11 +155,11 @@ export function MyRequestsPage() {
         {/* Status Filter Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-[#dfe5e8]">
           {[
-            { key: 'all', label: 'All Requests', count: counts.all },
-            { key: 'pending', label: 'Pending Review', count: counts.pending },
-            { key: 'approved', label: 'Approved', count: counts.approved },
-            { key: 'draft', label: 'Drafts', count: counts.draft },
-            { key: 'rejected', label: 'Rejected', count: counts.rejected },
+            { key: "all", label: "All Requests", count: counts.all },
+            { key: "pending", label: "Pending Review", count: counts.pending },
+            { key: "approved", label: "Approved", count: counts.approved },
+            { key: "draft", label: "Drafts", count: counts.draft },
+            { key: "rejected", label: "Rejected", count: counts.rejected },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -146,16 +169,16 @@ export function MyRequestsPage() {
               }}
               className={`px-3.5 py-2 text-xs font-semibold rounded-xl whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${
                 statusFilter === tab.key
-                  ? 'bg-[#00646f] text-white shadow-sm'
-                  : 'bg-[#ebf5ff] text-[#3e494a] hover:bg-[#dfe5e8]'
+                  ? "bg-[#00646f] text-white shadow-sm"
+                  : "bg-[#ebf5ff] text-[#3e494a] hover:bg-[#dfe5e8]"
               }`}
             >
               <span>{tab.label}</span>
               <span
                 className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
                   statusFilter === tab.key
-                    ? 'bg-white/20 text-white'
-                    : 'bg-white text-[#687781]'
+                    ? "bg-white/20 text-white"
+                    : "bg-white text-[#687781]"
                 }`}
               >
                 {tab.count}
@@ -168,7 +191,9 @@ export function MyRequestsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Search */}
           <div className="flex items-center bg-[#ebf5ff] px-3.5 py-2 rounded-xl border border-[#bdc9ca]/30 focus-within:ring-2 focus-within:ring-[#00646f]/30">
-            <span className="material-symbols-outlined text-[#687781] text-[18px]">search</span>
+            <span className="material-symbols-outlined text-[#687781] text-[18px]">
+              search
+            </span>
             <input
               type="text"
               placeholder="Search keyword or reason..."
@@ -181,10 +206,12 @@ export function MyRequestsPage() {
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => setSearchQuery("")}
                 className="text-[#687781] hover:text-[#0f1d27]"
               >
-                <span className="material-symbols-outlined text-[16px]">close</span>
+                <span className="material-symbols-outlined text-[16px]">
+                  close
+                </span>
               </button>
             )}
           </div>
@@ -229,13 +256,17 @@ export function MyRequestsPage() {
           {/* Sort Order Toggle */}
           <div className="flex items-center justify-end">
             <button
-              onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+              onClick={() =>
+                setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
+              }
               className="flex items-center gap-1.5 px-3 py-2 bg-[#ebf5ff] hover:bg-[#dfe5e8] text-xs font-semibold text-[#00646f] rounded-xl border border-[#bdc9ca]/30 transition-colors w-full justify-center cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">
-                {sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward'}
+                {sortOrder === "desc" ? "arrow_downward" : "arrow_upward"}
               </span>
-              <span>{sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}</span>
+              <span>
+                {sortOrder === "desc" ? "Newest First" : "Oldest First"}
+              </span>
             </button>
           </div>
         </div>
@@ -248,14 +279,22 @@ export function MyRequestsPage() {
             <EmptyState
               title="No leave requests found"
               description="No applications match your selected filters or search terms."
-              actionLabel={statusFilter !== 'all' || searchQuery ? 'Reset Filters' : 'Request Leave'}
+              actionLabel={
+                statusFilter !== "all" || searchQuery
+                  ? "Reset Filters"
+                  : "Request Leave"
+              }
               onAction={() => {
-                if (statusFilter !== 'all' || searchQuery || typeFilter !== 'all') {
-                  setStatusFilter('all');
-                  setTypeFilter('all');
-                  setSearchQuery('');
+                if (
+                  statusFilter !== "all" ||
+                  searchQuery ||
+                  typeFilter !== "all"
+                ) {
+                  setStatusFilter("all");
+                  setTypeFilter("all");
+                  setSearchQuery("");
                 } else {
-                  navigate('/employee/request-leave');
+                  navigate("/employee/request-leave");
                 }
               }}
             />
@@ -296,29 +335,29 @@ export function MyRequestsPage() {
                       <div className="flex items-center gap-2.5">
                         <span
                           className={`material-symbols-outlined text-[18px] p-1.5 rounded-lg ${
-                            req.typeKey === 'annual'
-                              ? 'bg-[#ebf5ff] text-[#00646f]'
-                              : req.typeKey === 'sick'
-                              ? 'bg-[#b7791f]/10 text-[#b7791f]'
-                              : req.typeKey === 'casual'
-                              ? 'bg-[#3d6fa8]/10 text-[#3d6fa8]'
-                              : 'bg-[#687781]/10 text-[#687781]'
+                            req.typeKey === "annual"
+                              ? "bg-[#ebf5ff] text-[#00646f]"
+                              : req.typeKey === "sick"
+                                ? "bg-[#b7791f]/10 text-[#b7791f]"
+                                : req.typeKey === "casual"
+                                  ? "bg-[#3d6fa8]/10 text-[#3d6fa8]"
+                                  : "bg-[#687781]/10 text-[#687781]"
                           }`}
                         >
-                          {req.typeKey === 'annual'
-                            ? 'flight_takeoff'
-                            : req.typeKey === 'sick'
-                            ? 'medical_services'
-                            : req.typeKey === 'casual'
-                            ? 'event_available'
-                            : 'calendar_today'}
+                          {req.typeKey === "annual"
+                            ? "flight_takeoff"
+                            : req.typeKey === "sick"
+                              ? "medical_services"
+                              : req.typeKey === "casual"
+                                ? "event_available"
+                                : "calendar_today"}
                         </span>
                         <div>
                           <span className="text-sm font-semibold text-[#0f1d27] block">
                             {req.leaveType}
                           </span>
                           <span className="text-[11px] text-[#687781]">
-                            {req.submittedDisplay || 'Draft'}
+                            {req.submittedDisplay || "Draft"}
                           </span>
                         </div>
                       </div>
@@ -331,18 +370,20 @@ export function MyRequestsPage() {
 
                     {/* Duration */}
                     <td className="p-4 px-6 text-xs font-bold text-[#00646f]">
-                      {req.durationDays} {req.durationDays === 1 ? 'Day' : 'Days'}
+                      {req.durationDays}{" "}
+                      {req.durationDays === 1 ? "Day" : "Days"}
                     </td>
 
                     {/* Reason */}
                     <td className="p-4 px-6 text-xs text-[#687781] max-w-xs truncate">
-                      {req.reason || 'No description provided'}
+                      {req.reason || "No description provided"}
                     </td>
 
                     {/* Status */}
                     <td className="p-4 px-6">
                       <Badge variant={req.status}>
-                        {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
+                        {req.status.charAt(0).toUpperCase() +
+                          req.status.slice(1)}
                       </Badge>
                     </td>
 
@@ -350,14 +391,16 @@ export function MyRequestsPage() {
                     <td className="p-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         {/* 1. DRAFT ACTIONS: Edit, Delete, View */}
-                        {req.status === 'draft' && (
+                        {req.status === "draft" && (
                           <>
                             <button
                               onClick={() => handleEditDraft(req)}
                               className="px-2.5 py-1 text-xs font-semibold text-[#00646f] hover:bg-[#ebf5ff] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                               title="Edit & Submit"
                             >
-                              <span className="material-symbols-outlined text-[16px]">edit</span>
+                              <span className="material-symbols-outlined text-[16px]">
+                                edit
+                              </span>
                               <span>Edit</span>
                             </button>
                             <button
@@ -365,19 +408,23 @@ export function MyRequestsPage() {
                               className="p-1 text-[#ba1a1a] hover:bg-[#ffdad6]/60 rounded-lg transition-colors cursor-pointer"
                               title="Delete Draft"
                             >
-                              <span className="material-symbols-outlined text-[18px]">delete</span>
+                              <span className="material-symbols-outlined text-[18px]">
+                                delete
+                              </span>
                             </button>
                           </>
                         )}
 
                         {/* 2. PENDING ACTIONS: View, Cancel */}
-                        {req.status === 'pending' && (
+                        {req.status === "pending" && (
                           <>
                             <button
                               onClick={() => setSelectedRequest(req)}
                               className="px-2.5 py-1 text-xs font-semibold text-[#00646f] hover:bg-[#ebf5ff] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                             >
-                              <span className="material-symbols-outlined text-[16px]">visibility</span>
+                              <span className="material-symbols-outlined text-[16px]">
+                                visibility
+                              </span>
                               <span>View</span>
                             </button>
                             <button
@@ -385,19 +432,23 @@ export function MyRequestsPage() {
                               className="px-2 py-1 text-xs font-semibold text-[#ba1a1a] hover:bg-[#ffdad6]/60 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                               title="Cancel Request"
                             >
-                              <span className="material-symbols-outlined text-[16px]">cancel</span>
+                              <span className="material-symbols-outlined text-[16px]">
+                                cancel
+                              </span>
                               <span>Cancel</span>
                             </button>
                           </>
                         )}
 
                         {/* 3. APPROVED / REJECTED / CANCELLED: View Details */}
-                        {req.status !== 'draft' && req.status !== 'pending' && (
+                        {req.status !== "draft" && req.status !== "pending" && (
                           <button
                             onClick={() => setSelectedRequest(req)}
                             className="px-2.5 py-1 text-xs font-semibold text-[#00646f] hover:bg-[#ebf5ff] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                           >
-                            <span className="material-symbols-outlined text-[16px]">visibility</span>
+                            <span className="material-symbols-outlined text-[16px]">
+                              visibility
+                            </span>
                             <span>Details</span>
                           </button>
                         )}
@@ -414,15 +465,19 @@ export function MyRequestsPage() {
         {filteredRequests.length > 0 && (
           <div className="p-4 px-6 bg-[#f5f7f8]/50 border-t border-[#dfe5e8] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#687781]">
             <div>
-              Showing{' '}
+              Showing{" "}
               <strong className="text-[#0f1d27]">
                 {(currentPage - 1) * itemsPerPage + 1}
-              </strong>{' '}
-              to{' '}
+              </strong>{" "}
+              to{" "}
               <strong className="text-[#0f1d27]">
                 {Math.min(currentPage * itemsPerPage, filteredRequests.length)}
-              </strong>{' '}
-              of <strong className="text-[#0f1d27]">{filteredRequests.length}</strong> requests
+              </strong>{" "}
+              of{" "}
+              <strong className="text-[#0f1d27]">
+                {filteredRequests.length}
+              </strong>{" "}
+              requests
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -431,29 +486,37 @@ export function MyRequestsPage() {
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 className="p-1.5 rounded-lg border border-[#dfe5e8] hover:bg-[#ebf5ff] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                <span className="material-symbols-outlined text-[18px]">
+                  chevron_left
+                </span>
               </button>
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`w-8 h-8 rounded-lg font-semibold text-xs transition-colors cursor-pointer ${
-                    currentPage === page
-                      ? 'bg-[#00646f] text-white'
-                      : 'border border-[#dfe5e8] hover:bg-[#ebf5ff] text-[#3e494a]'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-8 h-8 rounded-lg font-semibold text-xs transition-colors cursor-pointer ${
+                      currentPage === page
+                        ? "bg-[#00646f] text-white"
+                        : "border border-[#dfe5e8] hover:bg-[#ebf5ff] text-[#3e494a]"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ),
+              )}
 
               <button
                 disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
                 className="p-1.5 rounded-lg border border-[#dfe5e8] hover:bg-[#ebf5ff] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                <span className="material-symbols-outlined text-[18px]">
+                  chevron_right
+                </span>
               </button>
             </div>
           </div>
@@ -465,18 +528,32 @@ export function MyRequestsPage() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#dfe5e8] space-y-4">
             <div className="flex items-center gap-3 text-[#ba1a1a]">
-              <span className="material-symbols-outlined text-[24px]">delete</span>
-              <h3 className="text-base font-bold text-[#0f1d27]">Delete Draft</h3>
+              <span className="material-symbols-outlined text-[24px]">
+                delete
+              </span>
+              <h3 className="text-base font-bold text-[#0f1d27]">
+                Delete Draft
+              </h3>
             </div>
             <p className="text-xs text-[#687781]">
-              Are you sure you want to permanently delete this leave draft ({deleteTarget.leaveType} -{' '}
-              {deleteTarget.dateDisplay})? This action cannot be undone.
+              Are you sure you want to permanently delete this leave draft (
+              {deleteTarget.leaveType} - {deleteTarget.dateDisplay})? This
+              action cannot be undone.
             </p>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(null)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDeleteTarget(null)}
+              >
                 Keep Draft
               </Button>
-              <Button variant="danger" size="sm" icon="delete" onClick={handleConfirmDelete}>
+              <Button
+                variant="danger"
+                size="sm"
+                icon="delete"
+                onClick={handleConfirmDelete}
+              >
                 Delete
               </Button>
             </div>
@@ -489,18 +566,32 @@ export function MyRequestsPage() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-[#dfe5e8] space-y-4">
             <div className="flex items-center gap-3 text-[#ba1a1a]">
-              <span className="material-symbols-outlined text-[24px]">cancel</span>
-              <h3 className="text-base font-bold text-[#0f1d27]">Cancel Leave Request</h3>
+              <span className="material-symbols-outlined text-[24px]">
+                cancel
+              </span>
+              <h3 className="text-base font-bold text-[#0f1d27]">
+                Cancel Leave Request
+              </h3>
             </div>
             <p className="text-xs text-[#687781]">
-              Are you sure you want to cancel your pending {cancelTarget.leaveType} request for{' '}
+              Are you sure you want to cancel your pending{" "}
+              {cancelTarget.leaveType} request for{" "}
               <strong>{cancelTarget.dateDisplay}</strong>?
             </p>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" size="sm" onClick={() => setCancelTarget(null)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCancelTarget(null)}
+              >
                 No, Keep
               </Button>
-              <Button variant="danger" size="sm" icon="check" onClick={handleConfirmCancel}>
+              <Button
+                variant="danger"
+                size="sm"
+                icon="check"
+                onClick={handleConfirmCancel}
+              >
                 Yes, Cancel Request
               </Button>
             </div>

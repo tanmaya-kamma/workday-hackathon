@@ -1,18 +1,19 @@
-import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext.jsx';
-import { useLeave } from '../../context/LeaveContext.jsx';
-import { PageHeader } from '../../components/common/PageHeader.jsx';
-import { Card } from '../../components/common/Card.jsx';
-import { Button } from '../../components/common/Button.jsx';
-import { StatusBadge } from '../../components/common/StatusBadge.jsx';
-import { LeaveApprovalModal } from '../../components/common/LeaveApprovalModal.jsx';
+import React, { useState } from "react";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { useLeave } from "../../context/LeaveContext.jsx";
+import { PageHeader } from "../../components/common/PageHeader.jsx";
+import { Card } from "../../components/common/Card.jsx";
+import { Button } from "../../components/common/Button.jsx";
+import { StatusBadge } from "../../components/common/StatusBadge.jsx";
+import { LeaveApprovalModal } from "../../components/common/LeaveApprovalModal.jsx";
 
 export function PendingApprovalsPage() {
   const { currentUser } = useAuth();
-  const { getPendingApprovals, approveLeaveRequest, getUserBalances } = useLeave();
+  const { getPendingApprovals, approveLeaveRequest, getUserBalances } =
+    useLeave();
 
   const [selectedRequest, setSelectedRequest] = useState(null);
-  const [modalMode, setModalMode] = useState('review');
+  const [modalMode, setModalMode] = useState("review");
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkProcessing, setBulkProcessing] = useState(false);
 
@@ -29,28 +30,36 @@ export function PendingApprovalsPage() {
 
   const handleToggleSelect = (id) => {
     setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
   };
 
-  const handleBulkApprove = () => {
+  const handleBulkApprove = async () => {
     if (selectedIds.length === 0) return;
+
     setBulkProcessing(true);
-    selectedIds.forEach((id) => {
-      approveLeaveRequest(id, 'Batch approved by manager');
-    });
-    setSelectedIds([]);
-    setBulkProcessing(false);
+
+    try {
+      await Promise.all(
+        selectedIds.map((id) =>
+          approveLeaveRequest(id, "Batch approved by manager"),
+        ),
+      );
+
+      setSelectedIds([]);
+    } finally {
+      setBulkProcessing(false);
+    }
   };
 
-  const handleOpenReview = (req, mode = 'review') => {
+  const handleOpenReview = (req, mode = "review") => {
     setSelectedRequest(req);
     setModalMode(mode);
   };
 
   const handleQuickApprove = (e, req) => {
     e.stopPropagation();
-    approveLeaveRequest(req.id, 'Approved by manager');
+    approveLeaveRequest(req.id, "Approved by manager");
   };
 
   return (
@@ -62,7 +71,8 @@ export function PendingApprovalsPage() {
         {selectedIds.length > 0 && (
           <div className="flex items-center gap-3 animate-in fade-in duration-150">
             <span className="text-xs text-[#687781] font-semibold">
-              {selectedIds.length} request{selectedIds.length > 1 ? 's' : ''} selected
+              {selectedIds.length} request{selectedIds.length > 1 ? "s" : ""}{" "}
+              selected
             </span>
             <Button
               variant="primary"
@@ -82,14 +92,17 @@ export function PendingApprovalsPage() {
       <div className="bg-white p-4 rounded-2xl border border-[#dfe5e8] shadow-xs flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#fff8e1] text-[#b7791f] flex items-center justify-center">
-            <span className="material-symbols-outlined text-[22px]">pending_actions</span>
+            <span className="material-symbols-outlined text-[22px]">
+              pending_actions
+            </span>
           </div>
           <div>
             <h3 className="text-sm font-bold text-[#0f1d27]">
               Approval Queue ({pendingRequests.length} Pending)
             </h3>
             <p className="text-xs text-[#687781]">
-              Approve or reject requests with full audit trail for payroll and project planning.
+              Approve or reject requests with full audit trail for payroll and
+              project planning.
             </p>
           </div>
         </div>
@@ -101,7 +114,9 @@ export function PendingApprovalsPage() {
               onClick={handleSelectAll}
               className="text-xs font-semibold text-[#00646f] hover:underline cursor-pointer px-2 py-1"
             >
-              {selectedIds.length === pendingRequests.length ? 'Deselect All' : 'Select All'}
+              {selectedIds.length === pendingRequests.length
+                ? "Deselect All"
+                : "Select All"}
             </button>
           </div>
         )}
@@ -112,11 +127,14 @@ export function PendingApprovalsPage() {
         <Card className="p-12 text-center border-[#dfe5e8]">
           <div className="flex flex-col items-center justify-center gap-3 max-w-md mx-auto">
             <div className="w-16 h-16 rounded-2xl bg-[#d8f3e5] text-[#22874e] flex items-center justify-center shadow-xs">
-              <span className="material-symbols-outlined text-[36px]">task_alt</span>
+              <span className="material-symbols-outlined text-[36px]">
+                task_alt
+              </span>
             </div>
             <h3 className="text-lg font-bold text-[#0f1d27]">All Caught Up!</h3>
             <p className="text-xs sm:text-sm text-[#687781] leading-relaxed">
-              There are no pending leave requests for your team at this time. New submissions from your team will appear here automatically.
+              There are no pending leave requests for your team at this time.
+              New submissions from your team will appear here automatically.
             </p>
           </div>
         </Card>
@@ -129,11 +147,11 @@ export function PendingApprovalsPage() {
             return (
               <div
                 key={req.id}
-                onClick={() => handleOpenReview(req, 'review')}
+                onClick={() => handleOpenReview(req, "review")}
                 className={`bg-white rounded-2xl border p-5 sm:p-6 transition-all cursor-pointer shadow-xs hover:shadow-md ${
                   isSelected
-                    ? 'border-[#00646f] ring-2 ring-[#00646f]/10 bg-[#f8fbfb]'
-                    : 'border-[#dfe5e8] hover:border-[#00646f]/40'
+                    ? "border-[#00646f] ring-2 ring-[#00646f]/10 bg-[#f8fbfb]"
+                    : "border-[#dfe5e8] hover:border-[#00646f]/40"
                 }`}
               >
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
@@ -163,7 +181,8 @@ export function PendingApprovalsPage() {
                         />
                       ) : (
                         <div className="w-12 h-12 rounded-full bg-[#00646f] text-white flex items-center justify-center font-bold text-sm">
-                          {req.initials || req.employeeName?.slice(0, 2).toUpperCase()}
+                          {req.initials ||
+                            req.employeeName?.slice(0, 2).toUpperCase()}
                         </div>
                       )}
                       <div>
@@ -171,9 +190,13 @@ export function PendingApprovalsPage() {
                           <h4 className="text-sm font-bold text-[#0f1d27] hover:text-[#00646f]">
                             {req.employeeName}
                           </h4>
-                          <span className="text-xs font-mono text-[#687781]">({req.id})</span>
+                          <span className="text-xs font-mono text-[#687781]">
+                            ({req.id})
+                          </span>
                         </div>
-                        <p className="text-xs text-[#687781]">{req.position || 'Team Member'}</p>
+                        <p className="text-xs text-[#687781]">
+                          {req.position || "Team Member"}
+                        </p>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-[11px] text-[#00646f] font-semibold bg-[#ebf5ff] px-2 py-0.5 rounded-md">
                             {req.department}
@@ -194,7 +217,9 @@ export function PendingApprovalsPage() {
                       </span>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span className="material-symbols-outlined text-[18px] text-[#00646f]">
-                          {req.typeKey === 'sick' ? 'medical_services' : 'event'}
+                          {req.typeKey === "sick"
+                            ? "medical_services"
+                            : "event"}
                         </span>
                         <span className="text-xs sm:text-sm font-bold text-[#0f1d27]">
                           {req.leaveType}
@@ -211,7 +236,8 @@ export function PendingApprovalsPage() {
                           {req.dateDisplay}
                         </span>
                         <span className="text-xs text-[#00646f] font-semibold">
-                          {req.durationDays} Working Day{req.durationDays > 1 ? 's' : ''}
+                          {req.durationDays} Working Day
+                          {req.durationDays > 1 ? "s" : ""}
                         </span>
                       </div>
                     </div>
@@ -222,21 +248,28 @@ export function PendingApprovalsPage() {
                       </span>
                       <div className="mt-0.5 flex items-center gap-2">
                         <span className="text-xs font-bold text-[#22874e] bg-[#d8f3e5] px-2 py-0.5 rounded-md">
-                          {req.typeKey === 'sick'
+                          {req.typeKey === "sick"
                             ? `${balances.sick.remaining}d Sick left`
-                            : `${balances.annual.remaining}d Annual left`}
+                            : req.typeKey === "casual"
+                              ? `${balances.casual.remaining}d Casual left`
+                              : req.typeKey === "unpaid"
+                                ? "No balance limit"
+                                : `${balances.annual.remaining}d Annual left`}
                         </span>
                       </div>
                     </div>
                   </div>
 
                   {/* Right: Actions */}
-                  <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className="flex items-center justify-end gap-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Button
                       variant="ghost"
                       size="sm"
                       icon="visibility"
-                      onClick={() => handleOpenReview(req, 'review')}
+                      onClick={() => handleOpenReview(req, "review")}
                     >
                       Review
                     </Button>
@@ -253,7 +286,7 @@ export function PendingApprovalsPage() {
                       variant="danger"
                       size="sm"
                       icon="cancel"
-                      onClick={() => handleOpenReview(req, 'reject')}
+                      onClick={() => handleOpenReview(req, "reject")}
                     >
                       Reject
                     </Button>
