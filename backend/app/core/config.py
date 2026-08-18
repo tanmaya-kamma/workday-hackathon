@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     # -- CORS --
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
 
+    # -- Jira --
+    jira_base_url: str = "https://meiyappansworkspace-43655612.atlassian.net"
+    jira_project_key: str = "KAN"
+    jira_email: str = "meiyappanmeenal2005@gmail.com"
+    jira_api_token: str = "ATATT3xFfGF0hNPLRxWdyxZG29vr3oObvWD_Dy9IOkbhZH_m-6fnsglIOVe8YMz0iVIAG9OyaO4RXHD_V4vNhpWihZ2CQ21dEEvxedytbPoeKSZ9fB3wNdQ6emmVd9Xzbu9uL0wMs9LxQwP9EhsHEnuotDBwmr-Thl5JEIF6zNaimy8w6eWwJ4w=0700597F"
+
     @property
     def cors_origins_list(self) -> List[str]:
         """Parse comma-separated CORS origins into a list."""
@@ -39,6 +45,7 @@ class Settings(BaseSettings):
         "env_file": ".env",
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
+        "extra": "ignore",
     }
 
 

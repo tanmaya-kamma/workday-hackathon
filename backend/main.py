@@ -87,3 +87,4 @@ async def health_check():
             "mongodb": "connected" if db_ok else "disconnected",
         },
     }
+    
