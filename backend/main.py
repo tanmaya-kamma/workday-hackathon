@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.routers.accrual import router as accrual_router
+from app.routers.eligibility import router as eligibility_router
 
 
 app = FastAPI(
@@ -12,6 +13,7 @@ app = FastAPI(
 
 # Accrual Engine routes
 app.include_router(accrual_router)
+app.include_router(eligibility_router)
 
 
 @app.get("/")
