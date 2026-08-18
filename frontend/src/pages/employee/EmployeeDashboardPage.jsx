@@ -79,7 +79,7 @@ export function EmployeeDashboardPage() {
           <Button
             variant="outline"
             icon="history"
-            onClick={() => navigate('/employee/track-requests')}
+            onClick={() => navigate('/employee/my-leave')}
             className="flex-1 md:flex-none"
           >
             Track Requests

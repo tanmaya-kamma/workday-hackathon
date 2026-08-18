@@ -6,13 +6,10 @@ import { formatDate } from '../utils/dateUtils.js';
 const LeaveContext = createContext(null);
 
 const STORAGE_KEY_REQUESTS = 'leavetrack_requests_v1';
-const STORAGE_KEY_NOTIFS = 'leavetrack_notifications_v1';
-const STORAGE_KEY_AUDIT = 'leavetrack_audit_logs_v1';
 
 export function LeaveProvider({ children }) {
   const { currentUser } = useAuth();
 
-  // 1. Persistent / Live Leave Requests from MongoDB
   const [requests, setRequests] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_REQUESTS);
@@ -23,32 +20,8 @@ export function LeaveProvider({ children }) {
     return [];
   });
 
-  // 2. Persistent Notifications
-  const [notifications, setNotifications] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_NOTIFS);
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.warn('Failed to load saved notifications from localStorage', e);
-    }
-    return [];
-  });
-
-  // 3. Persistent Audit Logs
-  const [auditLogs, setAuditLogs] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_AUDIT);
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.warn('Failed to load saved audit logs from localStorage', e);
-    }
-    return [];
-  });
-
-  // 4. Live MongoDB Database Employees
   const [dbEmployees, setDbEmployees] = useState([]);
 
-  // Map backend MongoDB request format to UI format
   const mapBackendLeaveToFrontend = (item) => {
     const typeMap = {
       vacation: 'annual',
@@ -106,7 +79,6 @@ export function LeaveProvider({ children }) {
     };
   };
 
-  // Fetch requests from MongoDB
   const fetchRequestsFromDB = async () => {
     if (!currentUser?.id) return;
     try {
@@ -143,7 +115,6 @@ export function LeaveProvider({ children }) {
     }
   };
 
-  // Fetch employees from MongoDB
   const fetchEmployeesFromDB = async () => {
     try {
       const res = await api.get('/hr/employees');
@@ -187,7 +158,6 @@ export function LeaveProvider({ children }) {
   // Global Toast State
   const [toast, setToast] = useState(null);
 
-  // Synchronize to localStorage
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_REQUESTS, JSON.stringify(requests));
@@ -196,23 +166,6 @@ export function LeaveProvider({ children }) {
     }
   }, [requests]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_NOTIFS, JSON.stringify(notifications));
-    } catch (e) {
-      console.warn('Failed to persist notifications', e);
-    }
-  }, [notifications]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_AUDIT, JSON.stringify(auditLogs));
-    } catch (e) {
-      console.warn('Failed to persist audit logs', e);
-    }
-  }, [auditLogs]);
-
-  // Toast Helper
   const showToast = (message, type = 'success') => {
     const id = Date.now();
     setToast({ id, message, type });
@@ -225,61 +178,8 @@ export function LeaveProvider({ children }) {
     setToast(null);
   };
 
-  // Add Notification Helper
-  const addNotification = ({ title, message, type = 'info', userId }) => {
-    const targetUserId = userId || currentUser?.id || 'usr_emp_01';
-    const newNotif = {
-      id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-      userId: targetUserId,
-      title,
-      message,
-      time: 'Just now',
-      timestamp: Date.now(),
-      read: false,
-      type,
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
-  };
-
-  // Add Audit Log Entry Helper
-  const addAuditLog = ({
-    userId,
-    userName,
-    userRole,
-    action,
-    requestId,
-    previousStatus = '',
-    newStatus = '',
-    comment = '',
-    department = '',
-  }) => {
-    const now = new Date();
-    const pad = (n) => String(n).padStart(2, '0');
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const dateStr = formatDate(now);
-
-    const newLog = {
-      id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-      timestamp: now.toISOString(),
-      timestampDisplay: `${dateStr} ${timeStr}`,
-      userId: userId || currentUser?.id || 'usr_unknown',
-      userName: userName || currentUser?.name || 'System User',
-      userRole: userRole || currentUser?.role || 'system',
-      action,
-      requestId: requestId || 'N/A',
-      previousStatus,
-      newStatus,
-      comment: comment || '',
-      department: department || currentUser?.department || 'Engineering',
-      organizationId: currentUser?.organizationId || 'org_proton_01',
-    };
-
-    setAuditLogs((prev) => [newLog, ...prev]);
-    return newLog;
-  };
-
   // ==========================================
-  // EMPLOYEE SCOPED OPERATIONS
+  // EMPLOYEE OPERATIONS
   // ==========================================
 
   const getMyRequests = (employeeId) => {
@@ -376,27 +276,18 @@ export function LeaveProvider({ children }) {
       const res = await api.post('/leaves/', payload);
       const newLeave = res.data;
 
-      // Refresh live MongoDB data
       await fetchRequestsFromDB();
       if (currentUser?.role === 'manager' || currentUser?.role === 'hr') {
         await fetchEmployeesFromDB();
       }
 
-      showToast('Leave request submitted to MongoDB successfully.', 'success');
+      showToast('Leave request submitted successfully.', 'success');
       return mapBackendLeaveToFrontend(newLeave);
     } catch (err) {
-      const errMsg = err.response?.data?.detail || err.message || 'Failed to submit leave request to MongoDB.';
+      const errMsg = err.response?.data?.detail || err.message || 'Failed to submit leave request.';
       showToast(errMsg, 'danger');
       return null;
     }
-  };
-
-  const submitRequest = (data, existingId) => submitLeaveRequest(data, existingId);
-
-  const updateLeaveRequest = (id, updatedFields) => {
-    setRequests((prev) =>
-      prev.map((req) => (req.id === id ? { ...req, ...updatedFields } : req))
-    );
   };
 
   const cancelLeaveRequest = async (id, reason = 'Cancelled by employee') => {
@@ -407,7 +298,7 @@ export function LeaveProvider({ children }) {
       await api.delete(`/leaves/${backendId}`);
       await fetchRequestsFromDB();
 
-      showToast('Leave request cancelled in MongoDB.', 'info');
+      showToast('Leave request cancelled.', 'info');
       return true;
     } catch (err) {
       const errMsg = err.response?.data?.detail || err.message || 'Failed to cancel leave request.';
@@ -422,7 +313,7 @@ export function LeaveProvider({ children }) {
   };
 
   // ==========================================
-  // MANAGER SCOPED OPERATIONS
+  // MANAGER OPERATIONS
   // ==========================================
 
   const getTeamRequests = (managerId) => {
@@ -464,7 +355,7 @@ export function LeaveProvider({ children }) {
       showToast(`Approved leave request for ${targetReq?.employeeName || 'employee'}.`, 'success');
       return true;
     } catch (err) {
-      const errMsg = err.response?.data?.detail || err.message || 'Failed to approve leave request in MongoDB.';
+      const errMsg = err.response?.data?.detail || err.message || 'Failed to approve leave request.';
       showToast(errMsg, 'danger');
       return false;
     }
@@ -489,53 +380,27 @@ export function LeaveProvider({ children }) {
         await fetchEmployeesFromDB();
       }
 
-      showToast(`Leave request for ${targetReq?.employeeName || 'employee'} was rejected in MongoDB.`, 'warning');
+      showToast(`Leave request for ${targetReq?.employeeName || 'employee'} was rejected.`, 'warning');
       return true;
     } catch (err) {
-      const errMsg = err.response?.data?.detail || err.message || 'Failed to reject leave request in MongoDB.';
+      const errMsg = err.response?.data?.detail || err.message || 'Failed to reject leave request.';
       showToast(errMsg, 'danger');
       return false;
     }
   };
 
-  const updateRequestStatus = (id, newStatus, reason = '') => {
-    if (newStatus === 'approved') {
-      return approveLeaveRequest(id, reason);
-    } else if (newStatus === 'rejected') {
-      return rejectLeaveRequest(id, reason || 'Rejected by manager');
-    }
-  };
-
-  const getTeamCalendar = (managerId) => {
-    const targetMgrId = managerId || currentUser?.id;
-    const team = getTeamMembers(targetMgrId);
-    const teamRequests = requests.filter(
-      (r) => r.managerId === targetMgrId && r.userId !== targetMgrId && r.status !== 'draft' && r.status !== 'cancelled'
-    );
-
-    return {
-      members: team,
-      requests: teamRequests,
-      approvedLeaves: teamRequests.filter((r) => r.status === 'approved'),
-      pendingLeaves: teamRequests.filter((r) => r.status === 'pending'),
-    };
-  };
-
   // ==========================================
-  // HR ORGANIZATION-WIDE OPERATIONS
+  // HR OPERATIONS
   // ==========================================
 
-  // 1. Get all requests in the organization
   const getOrganizationRequests = () => {
     return requests;
   };
 
-  // 2. Get all employees in the organization
   const getOrganizationEmployees = () => {
     return dbEmployees;
   };
 
-  // Add new employee to MongoDB and local roster
   const addEmployee = async (employeeData) => {
     try {
       const res = await api.post('/hr/employees', {
@@ -575,7 +440,7 @@ export function LeaveProvider({ children }) {
       };
 
       setDbEmployees((prev) => [newEmp, ...prev]);
-      showToast(`Employee ${u.full_name} (${u.employee_id}) added to MongoDB!`, 'success');
+      showToast(`Employee ${u.full_name} (${u.employee_id}) added!`, 'success');
       return { success: true, employee: newEmp };
     } catch (err) {
       const msg = err.response?.data?.detail || err.message || 'Failed to add employee.';
@@ -584,59 +449,47 @@ export function LeaveProvider({ children }) {
     }
   };
 
-  // 3. Get comprehensive Organization Stats & Analytics
-  const getOrganizationStats = (orgId) => {
-    const orgRequests = getOrganizationRequests(orgId);
-    const employees = getOrganizationEmployees(orgId);
+  const getOrganizationStats = () => {
+    const orgRequests = getOrganizationRequests();
+    const employees = getOrganizationEmployees();
 
-    const todayDate = '2026-10-12'; // Current simulation active date
+    const today = new Date();
+    const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const currentMonth = todayDate.substring(0, 7);
 
-    // 1. Total Employees
     const totalEmployees = employees.length;
 
-    // 2. Employees on leave today (approved leave spanning today)
     const onLeaveTodayRequests = orgRequests.filter(
       (r) => r.status === 'approved' && r.startDate <= todayDate && r.endDate >= todayDate
     );
     const onLeaveTodayCount = onLeaveTodayRequests.length;
     const onLeavePercentage = totalEmployees > 0 ? ((onLeaveTodayCount / totalEmployees) * 100).toFixed(1) : 0;
 
-    // 3. Pending requests across the entire organization
     const pendingRequests = orgRequests.filter((r) => r.status === 'pending');
     const pendingCount = pendingRequests.length;
 
-    // 4. Approved this month (October 2026)
     const approvedThisMonthReqs = orgRequests.filter(
       (r) =>
         r.status === 'approved' &&
-        ((r.startDate && r.startDate.startsWith('2026-10')) || (r.lastUpdated && r.lastUpdated.startsWith('2026-10')))
+        ((r.startDate && r.startDate.startsWith(currentMonth)) || (r.lastUpdated && r.lastUpdated.startsWith(currentMonth)))
     );
     const approvedThisMonthCount = approvedThisMonthReqs.length;
     const approvedThisMonthDays = approvedThisMonthReqs.reduce((sum, r) => sum + (r.durationDays || 0), 0);
 
-    // 5. Rejected this month
     const rejectedThisMonthCount = orgRequests.filter(
       (r) =>
         r.status === 'rejected' &&
-        ((r.lastUpdated && r.lastUpdated.startsWith('2026-10')) || (r.submittedAt && r.submittedAt.startsWith('2026-10')))
+        ((r.lastUpdated && r.lastUpdated.startsWith(currentMonth)) || (r.submittedAt && r.submittedAt.startsWith(currentMonth)))
     ).length;
 
-    // 6. Upcoming leave (approved requests starting after today)
     const upcomingLeaves = orgRequests.filter(
       (r) => r.status === 'approved' && r.startDate > todayDate
     );
     const upcomingLeaveCount = upcomingLeaves.length;
 
-    // 7. Department Breakdown
     const departments = [
-      'Engineering',
-      'Design',
-      'Product',
-      'Finance',
-      'Human Resources',
-      'Marketing',
-      'Sales',
-      'Operations',
+      'Engineering', 'Design', 'Product', 'Finance',
+      'Human Resources', 'Marketing', 'Sales', 'Operations',
     ];
 
     const departmentStats = departments.map((dept) => {
@@ -656,44 +509,38 @@ export function LeaveProvider({ children }) {
         sick: sickDays,
         casual: casualDays,
         unpaid: unpaidDays,
-        totalDays: totalDays || (deptEmployees * 2), // minimum baseline for clean visual charts
+        totalDays,
         pendingCount: orgRequests.filter((r) => r.department === dept && r.status === 'pending').length,
       };
     });
 
-    // 8. Leave by Type Breakdown
     const leaveTypeStats = [
       {
-        type: 'Annual Leave',
-        key: 'annual',
+        type: 'Annual Leave', key: 'annual',
         count: orgRequests.filter((r) => r.typeKey === 'annual').length,
         days: orgRequests.filter((r) => r.typeKey === 'annual' && r.status === 'approved').reduce((s, r) => s + (r.durationDays || 0), 0),
         color: '#00646f',
       },
       {
-        type: 'Sick Leave',
-        key: 'sick',
+        type: 'Sick Leave', key: 'sick',
         count: orgRequests.filter((r) => r.typeKey === 'sick').length,
         days: orgRequests.filter((r) => r.typeKey === 'sick' && r.status === 'approved').reduce((s, r) => s + (r.durationDays || 0), 0),
         color: '#b7791f',
       },
       {
-        type: 'Casual Leave',
-        key: 'casual',
+        type: 'Casual Leave', key: 'casual',
         count: orgRequests.filter((r) => r.typeKey === 'casual').length,
         days: orgRequests.filter((r) => r.typeKey === 'casual' && r.status === 'approved').reduce((s, r) => s + (r.durationDays || 0), 0),
         color: '#3d6fa8',
       },
       {
-        type: 'Unpaid Leave',
-        key: 'unpaid',
+        type: 'Unpaid Leave', key: 'unpaid',
         count: orgRequests.filter((r) => r.typeKey === 'unpaid').length,
         days: orgRequests.filter((r) => r.typeKey === 'unpaid' && r.status === 'approved').reduce((s, r) => s + (r.durationDays || 0), 0),
         color: '#687781',
       },
     ];
 
-    // 9. Request Status Distribution
     const statusStats = {
       draft: orgRequests.filter((r) => r.status === 'draft').length,
       pending: orgRequests.filter((r) => r.status === 'pending').length,
@@ -701,22 +548,6 @@ export function LeaveProvider({ children }) {
       rejected: orgRequests.filter((r) => r.status === 'rejected').length,
       cancelled: orgRequests.filter((r) => r.status === 'cancelled').length,
     };
-
-    // 10. Monthly Leave Trends (Jan to Dec 2026)
-    const monthlyTrends = [
-      { month: 'Jan', monthFull: 'January', approvedDays: 18, pendingDays: 0, totalRequests: 6 },
-      { month: 'Feb', monthFull: 'February', approvedDays: 14, pendingDays: 0, totalRequests: 5 },
-      { month: 'Mar', monthFull: 'March', approvedDays: 22, pendingDays: 0, totalRequests: 8 },
-      { month: 'Apr', monthFull: 'April', approvedDays: 19, pendingDays: 0, totalRequests: 7 },
-      { month: 'May', monthFull: 'May', approvedDays: 28, pendingDays: 0, totalRequests: 9 },
-      { month: 'Jun', monthFull: 'June', approvedDays: 34, pendingDays: 0, totalRequests: 11 },
-      { month: 'Jul', monthFull: 'July', approvedDays: 45, pendingDays: 0, totalRequests: 14 },
-      { month: 'Aug', monthFull: 'August', approvedDays: 42, pendingDays: 0, totalRequests: 13 },
-      { month: 'Sep', monthFull: 'September', approvedDays: 31, pendingDays: 0, totalRequests: 10 },
-      { month: 'Oct', monthFull: 'October', approvedDays: approvedThisMonthDays || 26, pendingDays: pendingCount * 3, totalRequests: orgRequests.length },
-      { month: 'Nov', monthFull: 'November', approvedDays: 24, pendingDays: 6, totalRequests: 8 },
-      { month: 'Dec', monthFull: 'December', approvedDays: 38, pendingDays: 8, totalRequests: 12 },
-    ];
 
     return {
       totalEmployees,
@@ -730,64 +561,26 @@ export function LeaveProvider({ children }) {
       departmentStats,
       leaveTypeStats,
       statusStats,
-      monthlyTrends,
     };
   };
 
-  // 4. Get Audit Logs
   const getAuditLogs = () => {
-    return [...auditLogs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    return [];
   };
 
-  // 5. HR Approve Leave Request
   const hrApproveLeaveRequest = async (requestId, comment = '') => {
     return await approveLeaveRequest(requestId, comment);
   };
 
-  // 6. HR Reject Leave Request
   const hrRejectLeaveRequest = async (requestId, comment = '') => {
     return await rejectLeaveRequest(requestId, comment);
   };
 
-  // Notification management
-  const userNotifications = notifications.filter(
-    (n) => !n.userId || n.userId === currentUser?.id
-  );
-
-  const unreadCount = userNotifications.filter((n) => !n.read).length;
-
-  const markNotificationsRead = () => {
-    setNotifications((prev) =>
-      prev.map((n) =>
-        !n.userId || n.userId === currentUser?.id ? { ...n, read: true } : n
-      )
-    );
-  };
-
-  const markNotificationRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
-  };
-
-  // Dynamic user leave balances calculation
   const getUserBalances = (userId) => {
     const targetId = userId || currentUser?.id;
     const userReqs = requests.filter(
       (r) => r.userId === targetId && r.status === 'approved'
     );
-
-    const annualUsed = userReqs
-      .filter((r) => r.typeKey === 'annual')
-      .reduce((sum, r) => sum + (r.durationDays || 0), 0);
-
-    const sickUsed = userReqs
-      .filter((r) => r.typeKey === 'sick')
-      .reduce((sum, r) => sum + (r.durationDays || 0), 0);
-
-    const casualUsed = userReqs
-      .filter((r) => r.typeKey === 'casual')
-      .reduce((sum, r) => sum + (r.durationDays || 0), 0);
 
     const member = dbEmployees.find((m) => m.id === targetId || m._id === targetId || m.employeeId === targetId);
     let rawBalances = currentUser?.id === targetId ? (currentUser?.balances || currentUser?.leave_balances) : (member?.balances || member?.leave_balances);
@@ -802,21 +595,9 @@ export function LeaveProvider({ children }) {
     const casRem = rawBalances?.casual?.remaining ?? (typeof rawBalances?.casual === 'number' ? rawBalances.casual : 6);
 
     return {
-      annual: {
-        total: annTotal,
-        used: Math.max(0, annTotal - annRem),
-        remaining: annRem,
-      },
-      sick: {
-        total: sickTotal,
-        used: Math.max(0, sickTotal - sickRem),
-        remaining: sickRem,
-      },
-      casual: {
-        total: casTotal,
-        used: Math.max(0, casTotal - casRem),
-        remaining: casRem,
-      },
+      annual: { total: annTotal, used: Math.max(0, annTotal - annRem), remaining: annRem },
+      sick: { total: sickTotal, used: Math.max(0, sickTotal - sickRem), remaining: sickRem },
+      casual: { total: casTotal, used: Math.max(0, casTotal - casRem), remaining: casRem },
       unpaid: {
         total: 0,
         used: userReqs.filter((r) => r.typeKey === 'unpaid').reduce((s, r) => s + (r.durationDays || 0), 0),
@@ -827,39 +608,27 @@ export function LeaveProvider({ children }) {
 
   const value = {
     requests,
-    notifications: userNotifications,
-    unreadCount,
     toast,
     showToast,
     closeToast,
     getMyRequests,
     getLeaveRequest,
-    createLeaveRequest: submitLeaveRequest,
     submitLeaveRequest,
-    submitRequest,
     saveDraft,
-    updateLeaveRequest,
     cancelLeaveRequest,
     deleteDraft,
-    updateRequestStatus,
     approveLeaveRequest,
     rejectLeaveRequest,
     getTeamRequests,
     getPendingApprovals,
     getTeamMembers,
-    getTeamCalendar,
-    // HR Exports
     getOrganizationRequests,
     getOrganizationEmployees,
     getOrganizationStats,
     addEmployee,
-    fetchEmployeesFromDB,
     getAuditLogs,
-    addAuditLog,
     hrApproveLeaveRequest,
     hrRejectLeaveRequest,
-    markNotificationsRead,
-    markNotificationRead,
     getUserBalances,
   };
 

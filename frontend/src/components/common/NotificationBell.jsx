@@ -1,10 +1,30 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useLeave } from '../../context/LeaveContext.jsx';
+import api from '../../api.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 export function NotificationBell() {
-  const { notifications, unreadCount, markNotificationsRead, markNotificationRead } = useLeave();
+  const { currentUser } = useAuth();
+  const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  const fetchNotifications = async () => {
+    if (!currentUser?.id) return;
+    try {
+      const res = await api.get('/notifications/');
+      if (res.data) {
+        setNotifications(res.data.items || []);
+      }
+    } catch (e) {
+      // Silently fail — notifications are non-critical
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [currentUser?.id]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -16,13 +36,29 @@ export function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
   const handleToggle = () => {
     setIsOpen(!isOpen);
   };
 
-  const handleMarkAllRead = (e) => {
+  const handleMarkAllRead = async (e) => {
     e.stopPropagation();
-    markNotificationsRead();
+    try {
+      await api.patch('/notifications/read-all');
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const handleMarkRead = async (id) => {
+    try {
+      await api.patch(`/notifications/${id}/read`);
+      setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n));
+    } catch (e) {
+      // ignore
+    }
   };
 
   return (
@@ -75,29 +111,15 @@ export function NotificationBell() {
               notifications.map((n) => (
                 <div
                   key={n.id}
-                  onClick={() => markNotificationRead(n.id)}
+                  onClick={() => handleMarkRead(n.id)}
                   className={`p-3.5 px-4 hover:bg-[#f5f7f8] transition-colors flex items-start gap-3 cursor-pointer ${
-                    !n.read ? 'bg-[#ebf5ff]/40' : ''
+                    !n.is_read ? 'bg-[#ebf5ff]/40' : ''
                   }`}
                 >
-                  <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                      n.type === 'success'
-                        ? 'bg-[#2e7d5b]/10 text-[#2e7d5b]'
-                        : n.type === 'danger'
-                        ? 'bg-[#ba1a1a]/10 text-[#ba1a1a]'
-                        : n.type === 'warning'
-                        ? 'bg-[#b7791f]/10 text-[#b7791f]'
-                        : 'bg-[#00646f]/10 text-[#00646f]'
-                    }`}
-                  >
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 bg-[#00646f]/10 text-[#00646f]">
                     <span className="material-symbols-outlined text-[16px]">
-                      {n.type === 'success'
-                        ? 'check_circle'
-                        : n.type === 'danger'
-                        ? 'cancel'
-                        : n.type === 'warning'
-                        ? 'warning'
+                      {n.type === 'leave_approved' ? 'check_circle'
+                        : n.type === 'leave_rejected' ? 'cancel'
                         : 'info'}
                     </span>
                   </div>
@@ -106,12 +128,11 @@ export function NotificationBell() {
                     <div className="flex items-center justify-between gap-1">
                       <span
                         className={`text-xs font-semibold truncate ${
-                          !n.read ? 'text-[#0f1d27]' : 'text-[#3e494a]'
+                          !n.is_read ? 'text-[#0f1d27]' : 'text-[#3e494a]'
                         }`}
                       >
                         {n.title}
                       </span>
-                      <span className="text-[10px] text-[#687781] shrink-0">{n.time}</span>
                     </div>
                     <p className="text-xs text-[#687781] mt-0.5 leading-relaxed">{n.message}</p>
                   </div>

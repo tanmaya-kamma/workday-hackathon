@@ -86,16 +86,6 @@ export function formatDate(dateInput) {
 }
 
 /**
- * Formats date into standard ISO YYYY-MM-DD
- */
-export function toIsoDateString(dateInput) {
-  if (!dateInput) return '';
-  const date = new Date(dateInput);
-  if (isNaN(date.getTime())) return '';
-  return date.toISOString().split('T')[0];
-}
-
-/**
  * Returns today's ISO date string (YYYY-MM-DD)
  */
 export function getTodayIsoString() {

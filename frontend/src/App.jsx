@@ -28,9 +28,6 @@ import { DirectoryPage } from './pages/hr/DirectoryPage.jsx';
 import { ReportsPage } from './pages/hr/ReportsPage.jsx';
 import { AuditLogsPage } from './pages/hr/AuditLogsPage.jsx';
 
-/**
- * Directs user silently to their role's specific home dashboard
- */
 function RoleHomeRedirect() {
   const { role, isAuthenticated } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -44,7 +41,7 @@ export function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
 
-      {/* Protected App Workspace Layout */}
+      {/* Protected App Layout */}
       <Route
         element={
           <ProtectedRoute>
@@ -52,271 +49,29 @@ export function App() {
           </ProtectedRoute>
         }
       >
-        {/* Dynamic Root Index */}
         <Route path="/" element={<RoleHomeRedirect />} />
 
-        {/* ================= EMPLOYEE ROLE ROUTES ================= */}
-        <Route
-          path="/employee/dashboard"
-          element={
-            <RoleRoute allowedRoles={['employee']}>
-              <EmployeeDashboardPage />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/employee/my-leave"
-          element={
-            <RoleRoute allowedRoles={['employee']}>
-              <MyRequestsPage />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/employee/request-leave"
-          element={
-            <RoleRoute allowedRoles={['employee']}>
-              <RequestLeavePage />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/employee/track-requests"
-          element={
-            <RoleRoute allowedRoles={['employee']}>
-              <MyRequestsPage />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/employee/my-requests"
-          element={
-            <RoleRoute allowedRoles={['employee']}>
-              <MyRequestsPage />
-            </RoleRoute>
-          }
-        />
+        {/* Employee Routes */}
+        <Route path="/employee/dashboard" element={<RoleRoute allowedRoles={['employee']}><EmployeeDashboardPage /></RoleRoute>} />
+        <Route path="/employee/my-leave" element={<RoleRoute allowedRoles={['employee']}><MyRequestsPage /></RoleRoute>} />
+        <Route path="/employee/request-leave" element={<RoleRoute allowedRoles={['employee']}><RequestLeavePage /></RoleRoute>} />
 
-        {/* ================= MANAGER ROLE ROUTES ================= */}
-        <Route
-          path="/manager/dashboard"
-          element={
-            <RoleRoute allowedRoles={['manager']}>
-              <ManagerDashboardPage />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/manager/my-leave"
-          element={
-            <RoleRoute allowedRoles={['manager']}>
-              <MyRequestsPage />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/manager/request-leave"
-          element={
-            <RoleRoute allowedRoles={['manager']}>
-              <RequestLeavePage />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/manager/team-requests"
-          element={
-            <RoleRoute allowedRoles={['manager']}>
-              <TeamRequestsPage />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/manager/approvals"
-          element={
-            <RoleRoute allowedRoles={['manager']}>
-              <PendingApprovalsPage />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/manager/calendar"
-          element={
-            <RoleRoute allowedRoles={['manager']}>
-              <TeamCalendarPage />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/manager/team-calendar"
-          element={
-            <RoleRoute allowedRoles={['manager']}>
-              <TeamCalendarPage />
-            </RoleRoute>
-          }
-        />
+        {/* Manager Routes */}
+        <Route path="/manager/dashboard" element={<RoleRoute allowedRoles={['manager']}><ManagerDashboardPage /></RoleRoute>} />
+        <Route path="/manager/my-leave" element={<RoleRoute allowedRoles={['manager']}><MyRequestsPage /></RoleRoute>} />
+        <Route path="/manager/request-leave" element={<RoleRoute allowedRoles={['manager']}><RequestLeavePage /></RoleRoute>} />
+        <Route path="/manager/team-requests" element={<RoleRoute allowedRoles={['manager']}><TeamRequestsPage /></RoleRoute>} />
+        <Route path="/manager/approvals" element={<RoleRoute allowedRoles={['manager']}><PendingApprovalsPage /></RoleRoute>} />
+        <Route path="/manager/calendar" element={<RoleRoute allowedRoles={['manager']}><TeamCalendarPage /></RoleRoute>} />
 
-        {/* ================= HR ADMIN ROLE ROUTES ================= */}
-        <Route
-          path="/hr/dashboard"
-          element={
-            <RoleRoute allowedRoles={['hr']}>
-              <HrDashboardPage />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/hr/all-requests"
-          element={
-            <RoleRoute allowedRoles={['hr']}>
-              <AllRequestsPage />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/hr/requests"
-          element={
-            <RoleRoute allowedRoles={['hr']}>
-              <AllRequestsPage />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/hr/employees"
-          element={
-            <RoleRoute allowedRoles={['hr']}>
-              <DirectoryPage />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/hr/directory"
-          element={
-            <RoleRoute allowedRoles={['hr']}>
-              <DirectoryPage />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/hr/reports"
-          element={
-            <RoleRoute allowedRoles={['hr']}>
-              <ReportsPage />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/hr/audit-logs"
-          element={
-            <RoleRoute allowedRoles={['hr']}>
-              <AuditLogsPage />
-            </RoleRoute>
-          }
-        />
+        {/* HR Routes */}
+        <Route path="/hr/dashboard" element={<RoleRoute allowedRoles={['hr']}><HrDashboardPage /></RoleRoute>} />
+        <Route path="/hr/all-requests" element={<RoleRoute allowedRoles={['hr']}><AllRequestsPage /></RoleRoute>} />
+        <Route path="/hr/directory" element={<RoleRoute allowedRoles={['hr']}><DirectoryPage /></RoleRoute>} />
+        <Route path="/hr/reports" element={<RoleRoute allowedRoles={['hr']}><ReportsPage /></RoleRoute>} />
+        <Route path="/hr/audit-logs" element={<RoleRoute allowedRoles={['hr']}><AuditLogsPage /></RoleRoute>} />
 
-        {/* ================= ALIAS & LEGACY URL HANDLERS (ROLE-GUARDED) ================= */}
-        {/* Legacy employee URLs */}
-        <Route
-          path="/employee-dashboard"
-          element={
-            <RoleRoute allowedRoles={['employee']}>
-              <Navigate to="/employee/dashboard" replace />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/request-leave"
-          element={
-            <RoleRoute allowedRoles={['employee']}>
-              <Navigate to="/employee/request-leave" replace />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/my-requests"
-          element={
-            <RoleRoute allowedRoles={['employee']}>
-              <Navigate to="/employee/my-leave" replace />
-            </RoleRoute>
-          }
-        />
-
-        {/* Legacy manager URLs */}
-        <Route
-          path="/manager-dashboard"
-          element={
-            <RoleRoute allowedRoles={['manager']}>
-              <Navigate to="/manager/dashboard" replace />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/team-requests"
-          element={
-            <RoleRoute allowedRoles={['manager']}>
-              <Navigate to="/manager/team-requests" replace />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/team-approvals"
-          element={
-            <RoleRoute allowedRoles={['manager']}>
-              <Navigate to="/manager/approvals" replace />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/team-calendar"
-          element={
-            <RoleRoute allowedRoles={['manager']}>
-              <Navigate to="/manager/calendar" replace />
-            </RoleRoute>
-          }
-        />
-
-        {/* Legacy HR URLs */}
-        <Route
-          path="/hr-dashboard"
-          element={
-            <RoleRoute allowedRoles={['hr']}>
-              <Navigate to="/hr/dashboard" replace />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/organization"
-          element={
-            <RoleRoute allowedRoles={['hr']}>
-              <Navigate to="/hr/dashboard" replace />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/directory"
-          element={
-            <RoleRoute allowedRoles={['hr']}>
-              <Navigate to="/hr/employees" replace />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/reports"
-          element={
-            <RoleRoute allowedRoles={['hr']}>
-              <Navigate to="/hr/reports" replace />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/audit-logs"
-          element={
-            <RoleRoute allowedRoles={['hr']}>
-              <Navigate to="/hr/audit-logs" replace />
-            </RoleRoute>
-          }
-        />
-
-        {/* Fallback Catch-all: silently redirect to user's dashboard */}
+        {/* Catch-all */}
         <Route path="*" element={<RoleHomeRedirect />} />
       </Route>
     </Routes>

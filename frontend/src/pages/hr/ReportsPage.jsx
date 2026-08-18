@@ -91,30 +91,6 @@ export function ReportsPage() {
     document.body.removeChild(link);
   };
 
-  const complianceReports = [
-    {
-      title: 'Q3 Statutory Leave Utilization Report',
-      description: 'Departmental aggregate report on vacation, sick, and personal days taken.',
-      date: 'Oct 01, 2026',
-      format: 'CSV / PDF',
-      badge: 'Statutory',
-    },
-    {
-      title: 'Annual PTO Balance Liability Audit',
-      description: 'Accrual rates, rollover days, and year-end liability calculations.',
-      date: 'Sep 15, 2026',
-      format: 'CSV / XLSX',
-      badge: 'Compliance',
-    },
-    {
-      title: 'Absenteeism & Medical Certificate Trend Summary',
-      description: 'Monthly sick leave anomalies and medical certificate verification summaries.',
-      date: 'Aug 30, 2026',
-      format: 'CSV / PDF',
-      badge: 'Audit',
-    },
-  ];
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -296,45 +272,6 @@ export function ReportsPage() {
         </Card>
       </div>
 
-      {/* Pre-Generated Compliance Reports List */}
-      <div>
-        <h3 className="text-base font-bold text-[#0f1d27] mb-3">Statutory & Compliance Downloads</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {complianceReports.map((rep, idx) => (
-            <Card key={idx} className="p-5 flex flex-col justify-between hover:shadow-md transition-shadow">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[#00646f] text-[22px]">
-                      description
-                    </span>
-                    <span className="text-[11px] font-bold uppercase text-[#687781] tracking-wider">
-                      {rep.format}
-                    </span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full bg-[#ebf5ff] text-[#00646f] text-[10px] font-bold">
-                    {rep.badge}
-                  </span>
-                </div>
-                <h4 className="text-sm font-bold text-[#0f1d27] mb-1">{rep.title}</h4>
-                <p className="text-xs text-[#687781] leading-relaxed">{rep.description}</p>
-              </div>
-
-              <div className="mt-5 pt-3 border-t border-[#dfe5e8] flex justify-between items-center">
-                <span className="text-[11px] text-[#687781]">{rep.date}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  icon="download"
-                  onClick={handleExportFullReport}
-                >
-                  Download
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

@@ -83,7 +83,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }) {
               </NavLink>
 
               <NavLink
-                to="/employee/track-requests"
+                to="/employee/my-leave"
                 className={getNavLinkClass}
                 onClick={onCloseMobile}
               >
@@ -187,7 +187,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }) {
               </NavLink>
 
               <NavLink
-                to="/hr/employees"
+                to="/hr/directory"
                 className={getNavLinkClass}
                 onClick={onCloseMobile}
               >

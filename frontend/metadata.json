@@ -1,6 +1,0 @@
-{
-  "name": "Proton Leave Management System",
-  "description": "Enterprise leave management, tracking, and approval portal for employees, managers, and HR administrators.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
