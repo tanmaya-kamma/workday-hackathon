@@ -5,7 +5,7 @@ Policy service — dynamic policy lookup from MongoDB and leave categorization.
 from datetime import date, datetime, time, timezone
 from typing import Optional
 
-from app.core.database import policies_collection
+import app.core.database as db
 
 
 _MEDICAL_KEYWORDS = [
@@ -69,9 +69,9 @@ class PolicyService:
             ],
         }
 
-        return policies_collection.find_one(query, sort=[("effective_from", -1)])
+        return db.policies_collection.find_one(query, sort=[("effective_from", -1)])
 
     @staticmethod
     def get_all_policies() -> list[dict]:
         """Return all configured policies from MongoDB."""
-        return list(policies_collection.find({}))
+        return list(db.policies_collection.find({}))

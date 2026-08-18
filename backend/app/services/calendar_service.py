@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta
 from typing import Optional
 
-from app.core.database import regional_calendars_collection
+import app.core.database as db
 
 
 class CalendarService:
@@ -78,7 +78,7 @@ class CalendarService:
             year = 2026
         """
 
-        return regional_calendars_collection.find_one(
+        return db.regional_calendars_collection.find_one(
             {
                 "region": region.upper(),
                 "year": year

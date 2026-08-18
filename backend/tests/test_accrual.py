@@ -215,7 +215,7 @@ def test_carry_forward_below_policy_limit():
     }
 
     with patch(
-        "app.services.accrual_service.leave_balances_collection.find_one",
+        "app.core.database.leave_balances_collection.find_one",
         return_value=fake_previous_balance
     ):
 
@@ -259,7 +259,7 @@ def test_carry_forward_respects_company_limit():
     }
 
     with patch(
-        "app.services.accrual_service.leave_balances_collection.find_one",
+        "app.core.database.leave_balances_collection.find_one",
         return_value=fake_previous_balance
     ):
 
@@ -303,7 +303,7 @@ def test_carry_forward_company_allows_30_days():
     }
 
     with patch(
-        "app.services.accrual_service.leave_balances_collection.find_one",
+        "app.core.database.leave_balances_collection.find_one",
         return_value=fake_previous_balance
     ):
 
@@ -337,7 +337,7 @@ def test_carry_forward_no_previous_balance():
     }
 
     with patch(
-        "app.services.accrual_service.leave_balances_collection.find_one",
+        "app.core.database.leave_balances_collection.find_one",
         return_value=None
     ):
 

@@ -4,11 +4,7 @@ from typing import Optional
 
 from bson import ObjectId
 
-from app.core.database import (
-    users_collection,
-    leave_requests_collection,
-    leave_balances_collection,
-)
+import app.core.database as db
 
 from app.services.policy_service import PolicyService
 from app.services.calendar_service import CalendarService
@@ -43,7 +39,7 @@ class AccrualService:
         Find an employee using the human-readable employee ID.
         """
 
-        return users_collection.find_one({
+        return db.users_collection.find_one({
             "employee_id": employee_id
         })
 
@@ -536,7 +532,7 @@ class AccrualService:
             "status": "approved"
         }
 
-        requests = leave_requests_collection.find(
+        requests = db.leave_requests_collection.find(
             query
         )
 
@@ -612,7 +608,7 @@ class AccrualService:
             "status": "pending"
         }
 
-        requests = leave_requests_collection.find(
+        requests = db.leave_requests_collection.find(
             query
         )
 
@@ -795,7 +791,7 @@ class AccrualService:
         previous_year = current_year - 1
 
         previous_balance = (
-            leave_balances_collection.find_one(
+            db.leave_balances_collection.find_one(
                 {
                     "user_id": user_id,
                     "year": previous_year
@@ -1066,7 +1062,7 @@ class AccrualService:
                 "usable": data["usable"]
             }
 
-        leave_balances_collection.update_one(
+        db.leave_balances_collection.update_one(
             {
                 "user_id": user_id,
                 "year": year
