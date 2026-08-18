@@ -21,6 +21,7 @@ from app.routers.hr import router as hr_router
 from app.routers.accrual import router as accrual_router
 from app.routers.eligibility import router as eligibility_router
 from app.routers.scenarios import router as scenarios_router
+from app.routers.jira import router as jira_router
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -70,6 +71,7 @@ app.include_router(hr_router)
 app.include_router(accrual_router)
 app.include_router(eligibility_router)
 app.include_router(scenarios_router)
+app.include_router(jira_router)
 
 
 @app.get("/", tags=["Root"])
@@ -89,3 +91,4 @@ async def health_check():
             "mongodb": "connected" if db_ok else "disconnected",
         },
     }
+    

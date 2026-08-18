@@ -6,6 +6,9 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute.jsx';
 import { RoleRoute } from './components/layout/RoleRoute.jsx';
 import { getRoleHome } from './utils/roleUtils.js';
 
+// Public Pages
+import { LandingPage } from './pages/LandingPage.jsx';
+
 // Auth Pages
 import { LoginPage } from './pages/auth/LoginPage.jsx';
 import { SignupPage } from './pages/auth/SignupPage.jsx';
@@ -31,18 +34,23 @@ import { AuditLogsPage } from './pages/hr/AuditLogsPage.jsx';
 
 function RoleHomeRedirect() {
   const { role, isAuthenticated } = useAuth();
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
   return <Navigate to={getRoleHome(role)} replace />;
 }
 
 export function App() {
   return (
     <Routes>
-      {/* Public Auth Routes */}
+      {/* Public / Auth */}
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
 
-      {/* Protected App Layout */}
+      {/* Protected Application */}
       <Route
         element={
           <ProtectedRoute>
@@ -50,15 +58,15 @@ export function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<RoleHomeRedirect />} />
+        <Route path="/app" element={<RoleHomeRedirect />} />
 
-        {/* Employee Routes */}
+        {/* Employee */}
         <Route path="/employee/dashboard" element={<RoleRoute allowedRoles={['employee']}><EmployeeDashboardPage /></RoleRoute>} />
         <Route path="/employee/my-leave" element={<RoleRoute allowedRoles={['employee']}><MyRequestsPage /></RoleRoute>} />
         <Route path="/employee/request-leave" element={<RoleRoute allowedRoles={['employee']}><RequestLeavePage /></RoleRoute>} />
         <Route path="/employee/what-if" element={<RoleRoute allowedRoles={['employee']}><WhatIfPage /></RoleRoute>} />
 
-        {/* Manager Routes */}
+        {/* Manager */}
         <Route path="/manager/dashboard" element={<RoleRoute allowedRoles={['manager']}><ManagerDashboardPage /></RoleRoute>} />
         <Route path="/manager/my-leave" element={<RoleRoute allowedRoles={['manager']}><MyRequestsPage /></RoleRoute>} />
         <Route path="/manager/request-leave" element={<RoleRoute allowedRoles={['manager']}><RequestLeavePage /></RoleRoute>} />
@@ -67,14 +75,14 @@ export function App() {
         <Route path="/manager/calendar" element={<RoleRoute allowedRoles={['manager']}><TeamCalendarPage /></RoleRoute>} />
         <Route path="/manager/what-if" element={<RoleRoute allowedRoles={['manager']}><WhatIfPage /></RoleRoute>} />
 
-        {/* HR Routes */}
+        {/* HR */}
         <Route path="/hr/dashboard" element={<RoleRoute allowedRoles={['hr']}><HrDashboardPage /></RoleRoute>} />
         <Route path="/hr/all-requests" element={<RoleRoute allowedRoles={['hr']}><AllRequestsPage /></RoleRoute>} />
         <Route path="/hr/directory" element={<RoleRoute allowedRoles={['hr']}><DirectoryPage /></RoleRoute>} />
         <Route path="/hr/reports" element={<RoleRoute allowedRoles={['hr']}><ReportsPage /></RoleRoute>} />
         <Route path="/hr/audit-logs" element={<RoleRoute allowedRoles={['hr']}><AuditLogsPage /></RoleRoute>} />
 
-        {/* Catch-all */}
+        {/* Catch-all: redirect to role-specific dashboard */}
         <Route path="*" element={<RoleHomeRedirect />} />
       </Route>
     </Routes>
