@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLeave } from "../../context/LeaveContext.jsx";
 import { PageHeader } from "../../components/common/PageHeader.jsx";
@@ -23,22 +23,231 @@ export function HrDashboardPage() {
 
   const [modalMode, setModalMode] = useState("review");
 
-  /*
-   * IMPORTANT:
-   *
-   * HR needs to see:
-   *
-   * pending
-   * pending_hr
-   *
-   * pending_hr is the second approval tier.
-   */
+  // ============================================================
+  // API CONFIGURATION
+  // ============================================================
+
+  const API_BASE =
+    import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+
+  const getAuthToken = () => {
+    return localStorage.getItem("wd_token") || "";
+  };
+
+  // ============================================================
+  // LEAVE POLICY STATE
+  // ============================================================
+
+  const [policy, setPolicy] = useState({
+    annual_leave: 20,
+    sick_leave: 12,
+    casual_leave: 6,
+    manager_approval_days: 2,
+    hr_direct_approval_days: 6,
+  });
+
+  const [policyLoading, setPolicyLoading] = useState(false);
+
+  const [policyMessage, setPolicyMessage] = useState("");
+
+  const [policyError, setPolicyError] = useState("");
+
+  // ============================================================
+  // REGIONAL CALENDAR STATE
+  // ============================================================
+
+  const [calendarRegion, setCalendarRegion] = useState("India");
+
+  const [calendarFile, setCalendarFile] = useState(null);
+
+  const [calendarLoading, setCalendarLoading] = useState(false);
+
+  const [calendarMessage, setCalendarMessage] = useState("");
+
+  const [calendarError, setCalendarError] = useState("");
+
+  // ============================================================
+  // LOAD LEAVE POLICY
+  // ============================================================
+
+  const loadPolicies = async () => {
+    try {
+      setPolicyError("");
+
+      const response = await fetch(`${API_BASE}/hr/policies`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Failed to load leave policies.");
+      }
+
+      setPolicy({
+        annual_leave: data.annual_leave ?? 20,
+
+        sick_leave: data.sick_leave ?? 12,
+
+        casual_leave: data.casual_leave ?? 6,
+
+        manager_approval_days: data.manager_approval_days ?? 2,
+
+        hr_direct_approval_days: data.hr_direct_approval_days ?? 6,
+      });
+    } catch (error) {
+      console.error("Policy loading error:", error);
+
+      setPolicyError(error?.message || "Unable to load leave policies.");
+    }
+  };
+
+  // ============================================================
+  // LOAD POLICY ON PAGE LOAD
+  // ============================================================
+
+  useEffect(() => {
+    loadPolicies();
+  }, []);
+
+  // ============================================================
+  // SAVE LEAVE POLICY
+  // ============================================================
+
+  const savePolicies = async () => {
+    setPolicyLoading(true);
+    setPolicyMessage("");
+    setPolicyError("");
+
+    try {
+      const response = await fetch(`${API_BASE}/hr/policies`, {
+        method: "PUT",
+
+        headers: {
+          "Content-Type": "application/json",
+
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
+
+        body: JSON.stringify(policy),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Failed to save leave policies.");
+      }
+
+      setPolicy({
+        annual_leave: data.annual_leave ?? 20,
+
+        sick_leave: data.sick_leave ?? 12,
+
+        casual_leave: data.casual_leave ?? 6,
+
+        manager_approval_days: data.manager_approval_days ?? 2,
+
+        hr_direct_approval_days: data.hr_direct_approval_days ?? 6,
+      });
+
+      setPolicyMessage("Leave policies updated successfully.");
+    } catch (error) {
+      console.error("Policy save error:", error);
+
+      setPolicyError(error?.message || "Failed to save leave policies.");
+    } finally {
+      setPolicyLoading(false);
+    }
+  };
+
+  // ============================================================
+  // UPLOAD REGIONAL CALENDAR
+  // ============================================================
+
+  const uploadCalendar = async () => {
+    if (!calendarFile) {
+      setCalendarError("Please select an Excel file first.");
+
+      setCalendarMessage("");
+
+      return;
+    }
+
+    if (!calendarFile.name.toLowerCase().endsWith(".xlsx")) {
+      setCalendarError("Please upload an .xlsx Excel file.");
+
+      setCalendarMessage("");
+
+      return;
+    }
+
+    setCalendarLoading(true);
+    setCalendarMessage("");
+    setCalendarError("");
+
+    try {
+      const formData = new FormData();
+
+      formData.append("file", calendarFile);
+
+      const response = await fetch(
+        `${API_BASE}/hr/regional-calendar?region=${encodeURIComponent(
+          calendarRegion,
+        )}`,
+        {
+          method: "POST",
+
+          headers: {
+            Authorization: `Bearer ${getAuthToken()}`,
+          },
+
+          body: formData,
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Failed to upload regional calendar.");
+      }
+
+      setCalendarMessage(
+        `${data.holiday_count} holidays uploaded successfully for ${data.region}.`,
+      );
+
+      setCalendarFile(null);
+
+      // Reset file input visually.
+      const fileInput = document.getElementById("regional-calendar-file");
+
+      if (fileInput) {
+        fileInput.value = "";
+      }
+    } catch (error) {
+      console.error("Calendar upload error:", error);
+
+      setCalendarError(error?.message || "Failed to upload regional calendar.");
+    } finally {
+      setCalendarLoading(false);
+    }
+  };
+
+  // ============================================================
+  // HR APPROVAL QUEUE
+  // ============================================================
 
   const pendingRequests = allRequests.filter(
     (r) => r.status === "pending" || r.status === "pending_hr",
   );
 
   const recentRequests = allRequests.slice(0, 6);
+
+  // ============================================================
+  // REVIEW MODAL
+  // ============================================================
 
   const handleOpenReview = (request, mode = "review") => {
     setSelectedRequest(request);
@@ -77,6 +286,309 @@ export function HrDashboardPage() {
           </Button>
         </div>
       </PageHeader>
+
+      {/* =====================================================
+          LEAVE POLICY CONFIGURATION
+      ====================================================== */}
+
+      <Card className="p-6">
+        <div className="flex items-start justify-between gap-4 mb-5">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#00646f]">
+                tune
+              </span>
+
+              <h3 className="text-base font-bold text-[#0f1d27]">
+                Leave Policy Configuration
+              </h3>
+            </div>
+
+            <p className="text-xs text-[#687781] mt-1">
+              Update organization-wide leave allowances and approval thresholds.
+            </p>
+          </div>
+
+          <span className="px-2.5 py-1 rounded-lg bg-[#f0f4f7] text-[10px] font-bold text-[#687781]">
+            HR / ADMIN
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {/* ANNUAL */}
+
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-[#687781] block mb-1.5">
+              Annual Leave
+            </label>
+
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                value={policy.annual_leave}
+                onChange={(e) =>
+                  setPolicy((prev) => ({
+                    ...prev,
+                    annual_leave: Number(e.target.value),
+                  }))
+                }
+                className="w-full px-3 py-2.5 pr-12 text-sm font-semibold rounded-xl border border-[#dfe5e8] bg-white focus:outline-none focus:border-[#00646f]"
+              />
+
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#687781] font-semibold">
+                days
+              </span>
+            </div>
+          </div>
+
+          {/* SICK */}
+
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-[#687781] block mb-1.5">
+              Sick Leave
+            </label>
+
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                value={policy.sick_leave}
+                onChange={(e) =>
+                  setPolicy((prev) => ({
+                    ...prev,
+                    sick_leave: Number(e.target.value),
+                  }))
+                }
+                className="w-full px-3 py-2.5 pr-12 text-sm font-semibold rounded-xl border border-[#dfe5e8] bg-white focus:outline-none focus:border-[#00646f]"
+              />
+
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#687781] font-semibold">
+                days
+              </span>
+            </div>
+          </div>
+
+          {/* CASUAL */}
+
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-[#687781] block mb-1.5">
+              Casual Leave
+            </label>
+
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                value={policy.casual_leave}
+                onChange={(e) =>
+                  setPolicy((prev) => ({
+                    ...prev,
+                    casual_leave: Number(e.target.value),
+                  }))
+                }
+                className="w-full px-3 py-2.5 pr-12 text-sm font-semibold rounded-xl border border-[#dfe5e8] bg-white focus:outline-none focus:border-[#00646f]"
+              />
+
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#687781] font-semibold">
+                days
+              </span>
+            </div>
+          </div>
+
+          {/* MANAGER THRESHOLD */}
+
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-[#687781] block mb-1.5">
+              Manager Approval Up To
+            </label>
+
+            <div className="relative">
+              <input
+                type="number"
+                min="1"
+                value={policy.manager_approval_days}
+                onChange={(e) =>
+                  setPolicy((prev) => ({
+                    ...prev,
+                    manager_approval_days: Number(e.target.value),
+                  }))
+                }
+                className="w-full px-3 py-2.5 pr-12 text-sm font-semibold rounded-xl border border-[#dfe5e8] bg-white focus:outline-none focus:border-[#00646f]"
+              />
+
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#687781] font-semibold">
+                days
+              </span>
+            </div>
+          </div>
+
+          {/* HR THRESHOLD */}
+
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-[#687781] block mb-1.5">
+              HR Direct Approval From
+            </label>
+
+            <div className="relative">
+              <input
+                type="number"
+                min="1"
+                value={policy.hr_direct_approval_days}
+                onChange={(e) =>
+                  setPolicy((prev) => ({
+                    ...prev,
+                    hr_direct_approval_days: Number(e.target.value),
+                  }))
+                }
+                className="w-full px-3 py-2.5 pr-12 text-sm font-semibold rounded-xl border border-[#dfe5e8] bg-white focus:outline-none focus:border-[#00646f]"
+              />
+
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#687781] font-semibold">
+                days
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* POLICY FOOTER */}
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-5 pt-4 border-t border-[#dfe5e8]">
+          <div>
+            {policyError && (
+              <span className="text-xs text-[#ba1a1a] font-medium">
+                {policyError}
+              </span>
+            )}
+
+            {!policyError && policyMessage && (
+              <span className="text-xs text-[#22874e] font-medium flex items-center gap-1">
+                <span className="material-symbols-outlined text-[15px]">
+                  check_circle
+                </span>
+
+                {policyMessage}
+              </span>
+            )}
+          </div>
+
+          <Button
+            variant="primary"
+            icon="save"
+            loading={policyLoading}
+            onClick={savePolicies}
+          >
+            Save Leave Policy
+          </Button>
+        </div>
+      </Card>
+
+      {/* =====================================================
+          REGIONAL HOLIDAY CALENDAR
+      ====================================================== */}
+
+      <Card className="p-6">
+        <div className="flex items-start gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-[#00646f]/10 text-[#00646f] flex items-center justify-center">
+            <span className="material-symbols-outlined">upload_file</span>
+          </div>
+
+          <div>
+            <h3 className="text-base font-bold text-[#0f1d27]">
+              Regional Holiday Calendar
+            </h3>
+
+            <p className="text-xs text-[#687781] mt-1">
+              Upload the organization's regional holiday calendar in Excel
+              format.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* REGION */}
+
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-[#687781] block mb-1.5">
+              Region
+            </label>
+
+            <select
+              value={calendarRegion}
+              onChange={(e) => setCalendarRegion(e.target.value)}
+              className="w-full px-3 py-2.5 text-xs rounded-xl border border-[#dfe5e8] bg-white focus:outline-none focus:border-[#00646f]"
+            >
+              <option value="India">India</option>
+
+              <option value="UK">United Kingdom</option>
+
+              <option value="US">United States</option>
+
+              <option value="Singapore">Singapore</option>
+            </select>
+          </div>
+
+          {/* FILE */}
+
+          <div>
+            <label
+              htmlFor="regional-calendar-file"
+              className="text-[10px] font-bold uppercase tracking-wider text-[#687781] block mb-1.5"
+            >
+              Excel Calendar
+            </label>
+
+            <input
+              id="regional-calendar-file"
+              type="file"
+              accept=".xlsx"
+              onChange={(e) => setCalendarFile(e.target.files?.[0] || null)}
+              className="w-full text-xs border border-[#dfe5e8] rounded-xl p-2 bg-white"
+            />
+          </div>
+
+          {/* UPLOAD */}
+
+          <div className="flex items-end">
+            <Button
+              variant="outline"
+              icon="cloud_upload"
+              loading={calendarLoading}
+              onClick={uploadCalendar}
+              className="w-full"
+            >
+              Upload Calendar
+            </Button>
+          </div>
+        </div>
+
+        {/* MESSAGE */}
+
+        {calendarError && (
+          <div className="mt-4 p-3 rounded-xl bg-[#fff1f0] border border-[#ba1a1a]/20 text-xs text-[#ba1a1a] font-medium">
+            {calendarError}
+          </div>
+        )}
+
+        {calendarMessage && (
+          <div className="mt-4 p-3 rounded-xl bg-[#f0faf5] border border-[#22874e]/20 text-xs text-[#22874e] font-medium flex items-center gap-2">
+            <span className="material-symbols-outlined text-[16px]">
+              check_circle
+            </span>
+
+            {calendarMessage}
+          </div>
+        )}
+
+        {/* EXCEL FORMAT */}
+
+        <div className="mt-4 p-3 rounded-xl bg-[#f8fbfb] border border-[#dfe5e8]">
+          <p className="text-[11px] text-[#687781]">
+            <span className="font-bold text-[#3e494a]">Excel format:</span> Date
+            | Holiday Name
+          </p>
+        </div>
+      </Card>
 
       {/* =====================================================
           METRICS
@@ -471,7 +983,7 @@ export function HrDashboardPage() {
       </Card>
 
       {/* =====================================================
-          MODAL
+          REVIEW MODAL
       ====================================================== */}
 
       {selectedRequest && (
