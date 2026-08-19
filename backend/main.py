@@ -22,6 +22,7 @@ from app.routers.accrual import router as accrual_router
 from app.routers.eligibility import router as eligibility_router
 from app.routers.scenarios import router as scenarios_router
 from app.routers.jira import router as jira_router
+from app.routers.recommender import router as recommender_router
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -72,6 +73,7 @@ app.include_router(accrual_router)
 app.include_router(eligibility_router)
 app.include_router(scenarios_router)
 app.include_router(jira_router)
+app.include_router(recommender_router)
 
 
 @app.get("/", tags=["Root"])

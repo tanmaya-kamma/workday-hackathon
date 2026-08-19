@@ -18,5 +18,9 @@ python-dotenv
 # Validation
 email-validator==2.3.0
 
+# AI recommender — openai SDK used as a generic client for any
+# OpenAI-compatible provider (default: Google Gemini free tier)
+openai==1.59.7
+
 # Testing
 pytest

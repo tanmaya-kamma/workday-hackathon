@@ -18,12 +18,14 @@ import { EmployeeDashboardPage } from './pages/employee/EmployeeDashboardPage.js
 import { RequestLeavePage } from './pages/employee/RequestLeavePage.jsx';
 import { MyRequestsPage } from './pages/employee/MyRequestsPage.jsx';
 import { WhatIfPage } from './pages/employee/WhatIfPage.jsx';
+import { RescheduleRequestsPage } from './pages/employee/RescheduleRequestsPage.jsx';
 
 // Manager Pages
 import { ManagerDashboardPage } from './pages/manager/ManagerDashboardPage.jsx';
 import { TeamRequestsPage } from './pages/manager/TeamRequestsPage.jsx';
 import { PendingApprovalsPage } from './pages/manager/PendingApprovalsPage.jsx';
 import { TeamCalendarPage } from './pages/manager/TeamCalendarPage.jsx';
+import { ReschedulePlannerPage } from './pages/manager/ReschedulePlannerPage.jsx';
 
 // HR Admin Pages
 import { HrDashboardPage } from './pages/hr/HrDashboardPage.jsx';
@@ -65,6 +67,7 @@ export function App() {
         <Route path="/employee/my-leave" element={<RoleRoute allowedRoles={['employee']}><MyRequestsPage /></RoleRoute>} />
         <Route path="/employee/request-leave" element={<RoleRoute allowedRoles={['employee']}><RequestLeavePage /></RoleRoute>} />
         <Route path="/employee/what-if" element={<RoleRoute allowedRoles={['employee']}><WhatIfPage /></RoleRoute>} />
+        <Route path="/employee/reschedules" element={<RoleRoute allowedRoles={['employee']}><RescheduleRequestsPage /></RoleRoute>} />
 
         {/* Manager */}
         <Route path="/manager/dashboard" element={<RoleRoute allowedRoles={['manager']}><ManagerDashboardPage /></RoleRoute>} />
@@ -74,6 +77,8 @@ export function App() {
         <Route path="/manager/approvals" element={<RoleRoute allowedRoles={['manager']}><PendingApprovalsPage /></RoleRoute>} />
         <Route path="/manager/calendar" element={<RoleRoute allowedRoles={['manager']}><TeamCalendarPage /></RoleRoute>} />
         <Route path="/manager/what-if" element={<RoleRoute allowedRoles={['manager']}><WhatIfPage /></RoleRoute>} />
+        <Route path="/manager/recommender" element={<RoleRoute allowedRoles={['manager']}><ReschedulePlannerPage /></RoleRoute>} />
+        <Route path="/manager/reschedules" element={<RoleRoute allowedRoles={['manager']}><RescheduleRequestsPage /></RoleRoute>} />
 
         {/* HR */}
         <Route path="/hr/dashboard" element={<RoleRoute allowedRoles={['hr']}><HrDashboardPage /></RoleRoute>} />

@@ -92,6 +92,15 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }) {
               </NavLink>
 
               <NavLink
+                to="/employee/reschedules"
+                className={getNavLinkClass}
+                onClick={onCloseMobile}
+              >
+                <span className="material-symbols-outlined text-[20px]">event_repeat</span>
+                <span>Reschedule Requests</span>
+              </NavLink>
+
+              <NavLink
                 to="/employee/my-leave"
                 className={getNavLinkClass}
                 onClick={onCloseMobile}
@@ -168,6 +177,24 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }) {
               >
                 <span className="material-symbols-outlined text-[20px]">model_training</span>
                 <span>What-If Scenarios</span>
+              </NavLink>
+
+              <NavLink
+                to="/manager/recommender"
+                className={getNavLinkClass}
+                onClick={onCloseMobile}
+              >
+                <span className="material-symbols-outlined text-[20px]">smart_toy</span>
+                <span>AI Reschedule Planner</span>
+              </NavLink>
+
+              <NavLink
+                to="/manager/reschedules"
+                className={getNavLinkClass}
+                onClick={onCloseMobile}
+              >
+                <span className="material-symbols-outlined text-[20px]">event_repeat</span>
+                <span>My Reschedules</span>
               </NavLink>
             </>
           )}

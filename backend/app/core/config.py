@@ -36,6 +36,14 @@ class Settings(BaseSettings):
     jira_email: str = "meiyappanmeenal2005@gmail.com"
     jira_api_token: str = "ATATT3xFfGF0hNPLRxWdyxZG29vr3oObvWD_Dy9IOkbhZH_m-6fnsglIOVe8YMz0iVIAG9OyaO4RXHD_V4vNhpWihZ2CQ21dEEvxedytbPoeKSZ9fB3wNdQ6emmVd9Xzbu9uL0wMs9LxQwP9EhsHEnuotDBwmr-Thl5JEIF6zNaimy8w6eWwJ4w=0700597F"
 
+    # -- Recommender agent LLM (any OpenAI-compatible provider) --
+    # Defaults target Google Gemini's free tier (key from aistudio.google.com).
+    # Leave llm_api_key empty to disable AI calls; the recommender then
+    # falls back to deterministic heuristic recommendations.
+    llm_api_key: str = ""
+    llm_model: str = "gemini-3.6-flash"
+    llm_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
     @property
     def cors_origins_list(self) -> List[str]:
         """Parse comma-separated CORS origins into a list."""

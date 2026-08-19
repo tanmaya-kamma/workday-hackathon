@@ -256,6 +256,168 @@ async def notify_leave_rejected(
         )
 
 
+async def notify_reschedule_requested(
+    reschedule_doc: dict,
+    manager: dict,
+) -> None:
+    """
+    Notify the employee that their manager is requesting a reschedule
+    of an existing leave request to new proposed dates.
+
+    notifications.user_id is stored as a string.
+    """
+
+    try:
+        db = get_db()
+
+        employee_id = _normalize_user_id(
+            reschedule_doc.get("employee_id")
+        )
+
+        if not employee_id:
+            logger.warning(
+                "Cannot create reschedule_request notification: "
+                "reschedule request has no employee_id."
+            )
+            return
+
+        manager_name = (
+            manager.get("full_name")
+            or manager.get("email")
+            or "Your manager"
+        )
+
+        proposed_start = reschedule_doc.get("proposed_start_date")
+        proposed_end = reschedule_doc.get("proposed_end_date")
+
+        notification = NotificationInDB(
+            user_id=employee_id,
+            title="Reschedule Requested",
+            message=(
+                f"{manager_name} is requesting to reschedule your "
+                f"{reschedule_doc.get('leave_type', 'leave')} leave "
+                f"({reschedule_doc.get('original_start_date'):%Y-%m-%d} to "
+                f"{reschedule_doc.get('original_end_date'):%Y-%m-%d}) to "
+                f"{proposed_start:%Y-%m-%d} – {proposed_end:%Y-%m-%d}. "
+                f"Reason: {reschedule_doc.get('reason', '')} "
+                f"Please accept or reject from the Reschedule Requests page."
+            ),
+            type="reschedule_request",
+            reference_id=str(
+                reschedule_doc["_id"]
+            ),
+        )
+
+        await db.notifications.insert_one(
+            notification.to_doc()
+        )
+
+        logger.info(
+            "Reschedule request notification created "
+            "for user %s.",
+            employee_id,
+        )
+
+    except Exception as exc:
+        logger.error(
+            "Failed to create reschedule_request notification: %s",
+            exc,
+            exc_info=True,
+        )
+
+
+async def notify_reschedule_responded(
+    reschedule_doc: dict,
+    employee: dict,
+    accepted: bool,
+) -> None:
+    """
+    Notify the manager that the employee accepted or rejected
+    the reschedule request, including the employee's message.
+
+    notifications.user_id is stored as a string.
+    """
+
+    try:
+        db = get_db()
+
+        manager_id = _normalize_user_id(
+            reschedule_doc.get("manager_id")
+        )
+
+        if not manager_id:
+            logger.warning(
+                "Cannot create reschedule response notification: "
+                "reschedule request has no manager_id."
+            )
+            return
+
+        employee_name = (
+            employee.get("full_name")
+            or employee.get("email")
+            or "Employee"
+        )
+
+        employee_message = reschedule_doc.get("employee_message")
+
+        message_text = (
+            f' Message: "{employee_message}"'
+            if employee_message
+            else ""
+        )
+
+        if accepted:
+            title = "Reschedule Accepted"
+            body = (
+                f"{employee_name} accepted your reschedule request. "
+                f"Their leave has been moved to "
+                f"{reschedule_doc.get('proposed_start_date'):%Y-%m-%d} – "
+                f"{reschedule_doc.get('proposed_end_date'):%Y-%m-%d} "
+                f"and is awaiting the normal approval flow."
+                f"{message_text}"
+            )
+        else:
+            title = "Reschedule Rejected"
+            body = (
+                f"{employee_name} rejected your reschedule request for "
+                f"{reschedule_doc.get('proposed_start_date'):%Y-%m-%d} – "
+                f"{reschedule_doc.get('proposed_end_date'):%Y-%m-%d}. "
+                f"The original leave dates remain unchanged."
+                f"{message_text}"
+            )
+
+        notification = NotificationInDB(
+            user_id=manager_id,
+            title=title,
+            message=body,
+            type=(
+                "reschedule_accepted"
+                if accepted
+                else "reschedule_rejected"
+            ),
+            reference_id=str(
+                reschedule_doc["_id"]
+            ),
+        )
+
+        await db.notifications.insert_one(
+            notification.to_doc()
+        )
+
+        logger.info(
+            "Reschedule response notification created "
+            "for user %s.",
+            manager_id,
+        )
+
+    except Exception as exc:
+        logger.error(
+            "Failed to create reschedule response notification: %s",
+            exc,
+            exc_info=True,
+        )
+
+
 # ============================================================================
 # QUERY NOTIFICATIONS
 # ============================================================================
