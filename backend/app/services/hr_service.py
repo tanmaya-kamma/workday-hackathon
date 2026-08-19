@@ -901,6 +901,65 @@ async def update_leave_policies(
         upsert=True,
     )
 
+    # ========================================================
+    # SYNC ACCRUAL POLICY DOCUMENTS
+    # ========================================================
+    #
+    # Employee balances are computed by AccrualService from the
+    # `policies` collection, not from `leave_policies`. Propagate
+    # the new org-wide numbers there so dashboards reflect the
+    # change. The simple HR form defines one flat entitlement per
+    # leave type, which supersedes tenure bands; existing bands
+    # are preserved in `tenure_rules_backup` so they can be
+    # restored by a richer policy editor later.
+
+    accrual_sync = [
+        ("VACATION", float(data["annual_leave"])),
+        ("SICK", float(data["sick_leave"])),
+        ("PERSONAL", float(data["casual_leave"])),
+    ]
+
+    for leave_type, entitlement in accrual_sync:
+
+        policy_doc = await db.policies.find_one(
+            {
+                "leave_type": leave_type
+            }
+        )
+
+        if policy_doc is None:
+            continue
+
+        policy_update = {
+            "annual_entitlement": entitlement,
+        }
+
+        # Never let the balance cap fall below the entitlement.
+        current_maximum = (
+            policy_doc.get("balance", {}).get("maximum")
+        )
+
+        if (
+            current_maximum is not None
+            and current_maximum < entitlement
+        ):
+            policy_update["balance.maximum"] = entitlement
+
+        if policy_doc.get("tenure_rules"):
+            policy_update["tenure_rules"] = []
+            policy_update["tenure_rules_backup"] = (
+                policy_doc["tenure_rules"]
+            )
+
+        await db.policies.update_one(
+            {
+                "_id": policy_doc["_id"]
+            },
+            {
+                "$set": policy_update
+            },
+        )
+
     return await get_leave_policies()
 
 

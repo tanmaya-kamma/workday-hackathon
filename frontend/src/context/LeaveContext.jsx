@@ -154,11 +154,29 @@ export function LeaveProvider({ children }) {
    */
 
   const normalizeBalances = (sourceBalances = {}) => {
-    const vacation = sourceBalances.vacation || sourceBalances.annual || {};
+    // Balances arrive in two shapes:
+    //   - rich objects from the accrual engine: { total|annual_entitlement, used, remaining, ... }
+    //   - flat remaining-day numbers from /auth/me: { annual: 6, sick: 10, ... }
+    const coerce = (value, defaultTotal) => {
+      if (typeof value === 'number') {
+        return {
+          total: defaultTotal,
+          used: Math.max(0, defaultTotal - value),
+          remaining: value,
+        };
+      }
+      const data = value || {};
+      if (data.total === undefined && data.annual_entitlement !== undefined) {
+        return { ...data, total: data.annual_entitlement };
+      }
+      return data;
+    };
 
-    const sick = sourceBalances.sick || {};
+    const vacation = coerce(sourceBalances.vacation ?? sourceBalances.annual, 20);
 
-    const personal = sourceBalances.personal || sourceBalances.casual || {};
+    const sick = coerce(sourceBalances.sick, 12);
+
+    const personal = coerce(sourceBalances.personal ?? sourceBalances.casual, 6);
 
     const getNumber = (value, fallback = 0) => {
       const number = Number(value);
@@ -237,10 +255,27 @@ export function LeaveProvider({ children }) {
       const res = await api.get("/auth/me");
 
       if (res.data) {
+        // /auth/me only exposes flat remaining-day counts; prefer the
+        // accrual engine's rich balances (total/used/remaining) when
+        // available. The accrual router is mounted at /api, not /api/v1.
+        let balances = res.data.leave_balances || {};
+
+        try {
+          const acc = await api.get(`/accrual/${res.data.employee_id}`, {
+            baseURL: "http://127.0.0.1:8000/api",
+          });
+
+          if (acc.data?.success && acc.data.data?.balances) {
+            balances = acc.data.data.balances;
+          }
+        } catch {
+          // Keep the flat /auth/me balances as a fallback.
+        }
+
         const user = {
           ...res.data,
 
-          leave_balances: normalizeBalances(res.data.leave_balances || {}),
+          leave_balances: normalizeBalances(balances),
         };
 
         setBackendUser(user);
