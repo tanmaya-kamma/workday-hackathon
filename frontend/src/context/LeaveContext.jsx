@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+
 import api from "../api.js";
 import { useAuth } from "./AuthContext.jsx";
 import { formatDate } from "../utils/dateUtils.js";
@@ -13,7 +14,10 @@ export function LeaveProvider({ children }) {
   const [requests, setRequests] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_REQUESTS);
-      if (saved) return JSON.parse(saved);
+
+      if (saved) {
+        return JSON.parse(saved);
+      }
     } catch (e) {
       console.warn("Failed to load saved requests from localStorage", e);
     }
@@ -53,6 +57,7 @@ export function LeaveProvider({ children }) {
     };
 
     const typeKey = typeMap[item.leave_type] || "annual";
+
     const leaveType = titleMap[item.leave_type] || "Annual Leave";
 
     return {
@@ -63,7 +68,9 @@ export function LeaveProvider({ children }) {
       employeeName: item.employee_name || "Employee",
 
       managerId: item.manager_id,
+
       approvalStage: item.approval_stage || null,
+
       leaveType,
       typeKey,
 
@@ -72,9 +79,9 @@ export function LeaveProvider({ children }) {
       startDate: item.start_date,
       endDate: item.end_date,
 
-      dateDisplay: `${formatDate(item.start_date)} - ${formatDate(
-        item.end_date,
-      )}`,
+      dateDisplay: `${formatDate(
+        item.start_date,
+      )} - ${formatDate(item.end_date)}`,
 
       durationDays: item.total_days || 1,
 
@@ -83,10 +90,13 @@ export function LeaveProvider({ children }) {
       status: item.status || "pending",
 
       managerRemarks: item.manager_remarks || "",
+
       reviewComment: item.manager_remarks || "",
 
       submittedAt: item.applied_at,
+
       createdAt: item.applied_at,
+
       appliedAt: item.applied_at,
 
       timeline: [
@@ -98,12 +108,15 @@ export function LeaveProvider({ children }) {
 
         {
           step: "Manager Review",
+
           date: item.reviewed_at ? formatDate(item.reviewed_at) : "Pending",
+
           status: item.status === "pending" ? "current" : "completed",
         },
 
         {
           step: "Final Decision",
+
           date: item.reviewed_at ? formatDate(item.reviewed_at) : "Pending",
 
           status:
@@ -120,6 +133,102 @@ export function LeaveProvider({ children }) {
   };
 
   // ============================================================
+  // BALANCE NORMALIZATION
+  // ============================================================
+
+  /*
+   * Backend / MongoDB uses:
+   *
+   * vacation
+   * sick
+   * personal
+   *
+   * Frontend uses:
+   *
+   * annual
+   * sick
+   * casual
+   *
+   * This helper keeps the frontend compatible with
+   * the dynamic accrual engine.
+   */
+
+  const normalizeBalances = (sourceBalances = {}) => {
+    const vacation = sourceBalances.vacation || sourceBalances.annual || {};
+
+    const sick = sourceBalances.sick || {};
+
+    const personal = sourceBalances.personal || sourceBalances.casual || {};
+
+    const getNumber = (value, fallback = 0) => {
+      const number = Number(value);
+
+      return Number.isFinite(number) ? number : fallback;
+    };
+
+    const buildBalance = (data, defaultTotal = 0) => {
+      const total = getNumber(data.total, defaultTotal);
+
+      const accrued = getNumber(data.accrued, total);
+
+      const carryForward = getNumber(data.carry_forward, 0);
+
+      const used = getNumber(data.used, 0);
+
+      const pending = getNumber(data.pending, 0);
+
+      const adjustments = getNumber(data.adjustments, 0);
+
+      const expired = getNumber(data.expired, 0);
+
+      const remaining =
+        data.remaining !== undefined
+          ? getNumber(data.remaining, 0)
+          : Math.max(
+              0,
+              accrued + carryForward + adjustments - used - pending - expired,
+            );
+
+      const usable =
+        data.usable !== undefined
+          ? getNumber(data.usable, remaining)
+          : remaining;
+
+      return {
+        total,
+        accrued,
+        carryForward,
+        used,
+        pending,
+        adjustments,
+        expired,
+        remaining,
+        usable,
+      };
+    };
+
+    return {
+      annual: buildBalance(vacation, 0),
+
+      sick: buildBalance(sick, 0),
+
+      casual: buildBalance(personal, 0),
+
+      unpaid: {
+        total: 0,
+        accrued: 0,
+        carryForward: 0,
+        used: 0,
+        pending: 0,
+        adjustments: 0,
+        expired: 0,
+        remaining: 999,
+        usable: 999,
+      },
+    };
+  };
+
+  // ============================================================
   // FETCH CURRENT USER + REAL BALANCES FROM BACKEND
   // ============================================================
 
@@ -128,7 +237,13 @@ export function LeaveProvider({ children }) {
       const res = await api.get("/auth/me");
 
       if (res.data) {
-        setBackendUser(res.data);
+        const user = {
+          ...res.data,
+
+          leave_balances: normalizeBalances(res.data.leave_balances || {}),
+        };
+
+        setBackendUser(user);
       }
     } catch (e) {
       console.warn("Could not fetch current user from MongoDB:", e);
@@ -140,14 +255,16 @@ export function LeaveProvider({ children }) {
   // ============================================================
 
   const fetchRequestsFromDB = async () => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.id) {
+      return;
+    }
 
     try {
       let combined = [];
 
-      // --------------------------------------------------------
+      // ------------------------------------------------------
       // EMPLOYEE
-      // --------------------------------------------------------
+      // ------------------------------------------------------
 
       if (currentUser.role === "employee") {
         const res = await api.get("/leaves/my");
@@ -157,9 +274,9 @@ export function LeaveProvider({ children }) {
         }
       }
 
-      // --------------------------------------------------------
+      // ------------------------------------------------------
       // MANAGER
-      // --------------------------------------------------------
+      // ------------------------------------------------------
       else if (currentUser.role === "manager") {
         const [teamRes, myRes] = await Promise.allSettled([
           api.get("/leaves/team"),
@@ -185,9 +302,9 @@ export function LeaveProvider({ children }) {
         combined = Array.from(mapById.values());
       }
 
-      // --------------------------------------------------------
+      // ------------------------------------------------------
       // HR / ADMIN
-      // --------------------------------------------------------
+      // ------------------------------------------------------
       else if (currentUser.role === "hr" || currentUser.role === "admin") {
         const [orgRes, myRes] = await Promise.allSettled([
           api.get("/hr/leaves"),
@@ -228,63 +345,45 @@ export function LeaveProvider({ children }) {
       const res = await api.get("/hr/employees");
 
       if (res.data && Array.isArray(res.data)) {
-        const mapped = res.data.map((u) => ({
-          id: u.id,
-          _id: u.id,
+        const mapped = res.data.map((u) => {
+          const balances = normalizeBalances(u.leave_balances || {});
 
-          employeeId: u.employee_id,
+          return {
+            id: u.id,
+            _id: u.id,
 
-          name: u.full_name,
+            employeeId: u.employee_id,
 
-          email: u.email,
+            name: u.full_name,
 
-          role: u.role,
+            email: u.email,
 
-          department: u.department,
+            role: u.role,
 
-          managerId: u.manager_id,
+            department: u.department,
 
-          managerName: u.manager_name || (u.manager_id ? "Manager" : "N/A"),
+            managerId: u.manager_id,
 
-          position:
-            u.role === "manager"
-              ? "Team Lead / Manager"
-              : u.role === "hr"
-                ? "HR Administrator"
-                : "Staff Member",
+            managerName: u.manager_name || (u.manager_id ? "Manager" : "N/A"),
 
-          status: "Active",
+            position:
+              u.role === "manager"
+                ? "Team Lead / Manager"
+                : u.role === "hr"
+                  ? "HR Administrator"
+                  : "Staff Member",
 
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(
-            u.full_name,
-          )}&background=0875e1&color=fff`,
+            status: u.is_active === false ? "Inactive" : "Active",
 
-          balances: {
-            annual: {
-              total: 20,
-              used: 0,
-              remaining: u.leave_balances?.annual ?? 20,
-            },
+            dateOfJoining: u.date_of_joining || null,
 
-            sick: {
-              total: 12,
-              used: 0,
-              remaining: u.leave_balances?.sick ?? 12,
-            },
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+              u.full_name || "Employee",
+            )}&background=0875e1&color=fff`,
 
-            casual: {
-              total: 6,
-              used: 0,
-              remaining: u.leave_balances?.casual ?? 6,
-            },
-
-            unpaid: {
-              total: 0,
-              used: 0,
-              remaining: 999,
-            },
-          },
-        }));
+            balances,
+          };
+        });
 
         setDbEmployees(mapped);
       }
@@ -303,13 +402,10 @@ export function LeaveProvider({ children }) {
       return;
     }
 
-    // Always fetch latest authenticated user + balances.
     fetchCurrentUserFromDB();
 
-    // Fetch latest leave requests.
     fetchRequestsFromDB();
 
-    // Managers / HR / Admin also need employee directory.
     if (
       currentUser.role === "manager" ||
       currentUser.role === "hr" ||
@@ -358,7 +454,9 @@ export function LeaveProvider({ children }) {
   const getMyRequests = (employeeId) => {
     const targetId = employeeId || currentUser?.id;
 
-    if (!targetId) return [];
+    if (!targetId) {
+      return [];
+    }
 
     return requests.filter((req) => String(req.userId) === String(targetId));
   };
@@ -545,10 +643,8 @@ export function LeaveProvider({ children }) {
 
       const newLeave = res.data;
 
-      // Refresh requests.
       await fetchRequestsFromDB();
 
-      // Refresh actual MongoDB balance.
       await fetchCurrentUserFromDB();
 
       if (
@@ -588,8 +684,6 @@ export function LeaveProvider({ children }) {
 
       await fetchRequestsFromDB();
 
-      // Refresh backend balance in case
-      // cancellation affects balance.
       await fetchCurrentUserFromDB();
 
       showToast("Leave request cancelled.", "info");
@@ -624,7 +718,9 @@ export function LeaveProvider({ children }) {
   const getTeamRequests = (managerId) => {
     const targetMgrId = managerId || currentUser?.id;
 
-    if (!targetMgrId) return [];
+    if (!targetMgrId) {
+      return [];
+    }
 
     return requests.filter(
       (req) =>
@@ -637,7 +733,9 @@ export function LeaveProvider({ children }) {
   const getPendingApprovals = (managerId) => {
     const targetMgrId = managerId || currentUser?.id;
 
-    if (!targetMgrId) return [];
+    if (!targetMgrId) {
+      return [];
+    }
 
     return requests.filter(
       (req) =>
@@ -651,7 +749,9 @@ export function LeaveProvider({ children }) {
   const getTeamMembers = (managerId) => {
     const targetMgrId = managerId || currentUser?.id;
 
-    if (!targetMgrId) return [];
+    if (!targetMgrId) {
+      return [];
+    }
 
     return dbEmployees.filter(
       (member) => String(member.managerId) === String(targetMgrId),
@@ -672,11 +772,8 @@ export function LeaveProvider({ children }) {
         remarks: comment || null,
       });
 
-      // Refresh leave requests.
       await fetchRequestsFromDB();
 
-      // IMPORTANT:
-      // Fetch latest balance from MongoDB.
       await fetchCurrentUserFromDB();
 
       if (
@@ -725,10 +822,8 @@ export function LeaveProvider({ children }) {
         remarks: comment.trim(),
       });
 
-      // Refresh requests.
       await fetchRequestsFromDB();
 
-      // Refresh latest backend balance.
       await fetchCurrentUserFromDB();
 
       if (
@@ -771,9 +866,37 @@ export function LeaveProvider({ children }) {
     return dbEmployees;
   };
 
+  // ============================================================
+  // ADD EMPLOYEE
+  // ============================================================
+
   const addEmployee = async (employeeData) => {
     try {
-      const res = await api.post("/hr/employees", {
+      /*
+       * IMPORTANT:
+       *
+       * We intentionally DO NOT send:
+       *
+       * annual_leave
+       * sick_leave
+       * casual_leave
+       *
+       * anymore.
+       *
+       * Leave entitlement is calculated by
+       * the backend AccrualService using:
+       *
+       * - date of joining
+       * - organization policy
+       * - accrual rules
+       * - proration
+       * - tenure
+       * - holidays
+       * - existing usage
+       * - pending leave
+       */
+
+      const payload = {
         employee_id:
           employeeData.employeeId || employeeData.employee_id || undefined,
 
@@ -793,85 +916,49 @@ export function LeaveProvider({ children }) {
         manager_id:
           employeeData.managerId || employeeData.manager_id || undefined,
 
-        annual_leave: Number(employeeData.annualLeave ?? 20),
+        /*
+         * THIS IS IMPORTANT.
+         *
+         * The accrual engine needs the employee's
+         * actual joining date.
+         */
 
-        sick_leave: Number(employeeData.sickLeave ?? 12),
+        date_of_joining:
+          employeeData.date_of_joining ||
+          employeeData.dateOfJoining ||
+          undefined,
+      };
 
-        casual_leave: Number(employeeData.casualLeave ?? 6),
-      });
+      const res = await api.post("/hr/employees", payload);
 
       const u = res.data;
 
-      const newEmp = {
-        id: u.id,
-        _id: u.id,
+      /*
+       * Do NOT manually construct balances here.
+       *
+       * The backend has already calculated
+       * and persisted the balance in MongoDB.
+       *
+       * Fetch the employee directory again so
+       * MongoDB becomes the source of truth.
+       */
 
-        employeeId: u.employee_id,
+      await fetchEmployeesFromDB();
 
-        name: u.full_name,
-
-        email: u.email,
-
-        role: u.role,
-
-        department: u.department,
-
-        managerId: u.manager_id,
-
-        managerName:
-          employeeData.managerName || (u.manager_id ? "Manager" : "N/A"),
-
-        position:
-          u.role === "manager"
-            ? "Team Lead / Manager"
-            : u.role === "hr"
-              ? "HR Administrator"
-              : "Staff Member",
-
-        status: "Active",
-
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(
-          u.full_name,
-        )}&background=00646f&color=fff`,
-
-        balances: {
-          annual: {
-            total: 18,
-            used: 0,
-            remaining: u.leave_balances?.annual ?? 20,
-          },
-
-          sick: {
-            total: 12,
-            used: 0,
-            remaining: u.leave_balances?.sick ?? 12,
-          },
-
-          casual: {
-            total: 6,
-            used: 0,
-            remaining: u.leave_balances?.casual ?? 6,
-          },
-
-          unpaid: {
-            total: 0,
-            used: 0,
-            remaining: 999,
-          },
-        },
-      };
-
-      setDbEmployees((prev) => [newEmp, ...prev]);
-
-      showToast(`Employee ${u.full_name} (${u.employee_id}) added!`, "success");
+      showToast(
+        `Employee ${u.full_name} (${u.employee_id}) added with automatically calculated leave balance!`,
+        "success",
+      );
 
       return {
         success: true,
-        employee: newEmp,
+        employee: u,
       };
     } catch (err) {
       const msg =
         err.response?.data?.detail || err.message || "Failed to add employee.";
+
+      console.error("Add employee failed:", err);
 
       showToast(msg, "danger");
 
@@ -986,6 +1073,7 @@ export function LeaveProvider({ children }) {
 
       return {
         department: dept,
+
         label: dept,
 
         employeeCount: deptEmployees,
@@ -1124,83 +1212,17 @@ export function LeaveProvider({ children }) {
   const getUserBalances = (userId) => {
     const targetId = userId || currentUser?.id;
 
-    /*
-     * IMPORTANT:
-     *
-     * For the currently logged-in employee,
-     * MongoDB/backend is the SOURCE OF TRUTH.
-     *
-     * We do NOT calculate balance from frontend
-     * leave requests anymore.
-     *
-     * /auth/me gives us the latest remaining balance.
-     */
+    // ----------------------------------------------------------
+    // CURRENT LOGGED-IN USER
+    // ----------------------------------------------------------
 
     if (backendUser && String(backendUser.id) === String(targetId)) {
-      const backendBalances = backendUser.leave_balances || {};
-
-      /*
-       * The current backend UserProfile returns
-       * the REMAINING balance.
-       *
-       * Therefore we use the backend values
-       * directly for "remaining".
-       *
-       * The original entitlement is currently:
-       * Annual = 18
-       * Sick = 12
-       * Casual = 6
-       *
-       * Used = Total - Remaining.
-       */
-
-      const annualTotal = 20;
-      const sickTotal = 12;
-      const casualTotal = 6;
-
-      const annualRemaining = Number(backendBalances.annual ?? annualTotal);
-
-      const sickRemaining = Number(backendBalances.sick ?? sickTotal);
-
-      const casualRemaining = Number(backendBalances.casual ?? casualTotal);
-
-      return {
-        annual: {
-          total: annualTotal,
-
-          used: Math.max(0, annualTotal - annualRemaining),
-
-          remaining: annualRemaining,
-        },
-
-        sick: {
-          total: sickTotal,
-
-          used: Math.max(0, sickTotal - sickRemaining),
-
-          remaining: sickRemaining,
-        },
-
-        casual: {
-          total: casualTotal,
-
-          used: Math.max(0, casualTotal - casualRemaining),
-
-          remaining: casualRemaining,
-        },
-
-        unpaid: {
-          total: 0,
-          used: 0,
-          remaining: 999,
-        },
-      };
+      return normalizeBalances(backendUser.leave_balances || {});
     }
 
-    /*
-     * For another employee shown in HR/Manager views,
-     * use the employee data fetched from the backend.
-     */
+    // ----------------------------------------------------------
+    // OTHER EMPLOYEE
+    // ----------------------------------------------------------
 
     const member = dbEmployees.find(
       (m) =>
@@ -1210,36 +1232,60 @@ export function LeaveProvider({ children }) {
     );
 
     if (member?.balances) {
-      return member.balances;
+      return normalizeBalances(member.balances);
     }
 
-    /*
-     * Safe fallback.
-     */
+    // ----------------------------------------------------------
+    // SAFE EMPTY FALLBACK
+    // ----------------------------------------------------------
 
     return {
       annual: {
-        total: 18,
+        total: 0,
+        accrued: 0,
+        carryForward: 0,
         used: 0,
-        remaining: 18,
+        pending: 0,
+        adjustments: 0,
+        expired: 0,
+        remaining: 0,
+        usable: 0,
       },
 
       sick: {
-        total: 12,
+        total: 0,
+        accrued: 0,
+        carryForward: 0,
         used: 0,
-        remaining: 12,
+        pending: 0,
+        adjustments: 0,
+        expired: 0,
+        remaining: 0,
+        usable: 0,
       },
 
       casual: {
-        total: 6,
+        total: 0,
+        accrued: 0,
+        carryForward: 0,
         used: 0,
-        remaining: 6,
+        pending: 0,
+        adjustments: 0,
+        expired: 0,
+        remaining: 0,
+        usable: 0,
       },
 
       unpaid: {
         total: 0,
+        accrued: 0,
+        carryForward: 0,
         used: 0,
+        pending: 0,
+        adjustments: 0,
+        expired: 0,
         remaining: 999,
+        usable: 999,
       },
     };
   };
@@ -1283,8 +1329,6 @@ export function LeaveProvider({ children }) {
 
     getUserBalances,
 
-    // Expose refresh helpers if any page needs
-    // to manually refresh backend data.
     fetchCurrentUserFromDB,
     fetchRequestsFromDB,
     fetchEmployeesFromDB,
