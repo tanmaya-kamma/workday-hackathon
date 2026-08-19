@@ -756,12 +756,29 @@ async def get_leave_policies() -> Dict[str, Any]:
 
     db = get_db()
 
+    current_year = datetime.utcnow().year
+
+    # The ACTIVE policy: either the legacy year-less doc or the
+    # newest doc whose effective_year has already arrived. Docs
+    # with a future effective_year are returned separately below.
     policy = (
         await db.leave_policies.find_one(
             {
-                "organization_id":
-                    "default"
-            }
+                "organization_id": "default",
+                "$or": [
+                    {
+                        "effective_year": {
+                            "$exists": False
+                        }
+                    },
+                    {
+                        "effective_year": {
+                            "$lte": current_year
+                        }
+                    },
+                ],
+            },
+            sort=[("effective_year", -1)],
         )
     )
 
@@ -826,6 +843,32 @@ async def get_leave_policies() -> Dict[str, Any]:
             ].isoformat()
         )
 
+    # ========================================================
+    # UPCOMING (FUTURE-YEAR) POLICIES
+    # ========================================================
+
+    upcoming_cursor = db.leave_policies.find(
+        {
+            "organization_id": "default",
+            "effective_year": {
+                "$gt": current_year
+            },
+        }
+    ).sort("effective_year", 1)
+
+    upcoming = []
+
+    async for doc in upcoming_cursor:
+
+        doc.pop("_id", None)
+
+        if isinstance(doc.get("updated_at"), datetime):
+            doc["updated_at"] = doc["updated_at"].isoformat()
+
+        upcoming.append(doc)
+
+    policy["upcoming_policies"] = upcoming
+
     return policy
 
 
@@ -839,7 +882,34 @@ async def update_leave_policies(
 
     db = get_db()
 
+    current_year = datetime.utcnow().year
+
+    effective_year = int(data["effective_year"])
+
+    # ========================================================
+    # CURRENT-YEAR POLICIES ARE IMMUTABLE
+    # ========================================================
+    #
+    # The policy in effect for the current year already governs
+    # live balances, validations, and approvals. It cannot be
+    # replaced mid-year; new policies apply from a future year.
+
+    if effective_year <= current_year:
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"The {current_year} leave policy is already in "
+                f"effect and cannot be added or changed — employee "
+                f"balances are being calculated from it right now. "
+                f"New policies can only be added for "
+                f"{current_year + 1} and onward."
+            ),
+        )
+
     update_data = {
+        "effective_year": effective_year,
+
         "annual_leave":
             float(
                 data[
@@ -882,7 +952,10 @@ async def update_leave_policies(
     await db.leave_policies.update_one(
         {
             "organization_id":
-                "default"
+                "default",
+
+            "effective_year":
+                effective_year,
         },
 
         {
@@ -902,16 +975,19 @@ async def update_leave_policies(
     )
 
     # ========================================================
-    # SYNC ACCRUAL POLICY DOCUMENTS
+    # VERSION THE ACCRUAL POLICY DOCUMENTS
     # ========================================================
     #
-    # Employee balances are computed by AccrualService from the
-    # `policies` collection, not from `leave_policies`. Propagate
-    # the new org-wide numbers there so dashboards reflect the
-    # change. The simple HR form defines one flat entitlement per
-    # leave type, which supersedes tenure bands; existing bands
-    # are preserved in `tenure_rules_backup` so they can be
-    # restored by a richer policy editor later.
+    # AccrualService selects policies by effective_from/effective_to,
+    # so a future policy is stored as a new dated version: the
+    # currently open version is closed on Dec 31 of the prior year
+    # and the new version opens on Jan 1 of the effective year.
+    # Current-year balances are untouched; the engine switches
+    # over automatically at the year boundary.
+
+    new_start = datetime(effective_year, 1, 1)
+
+    prior_end = datetime(effective_year - 1, 12, 31)
 
     accrual_sync = [
         ("VACATION", float(data["annual_leave"])),
@@ -921,43 +997,67 @@ async def update_leave_policies(
 
     for leave_type, entitlement in accrual_sync:
 
-        policy_doc = await db.policies.find_one(
+        # Latest version that starts before the new policy —
+        # the template for config we don't collect on this form.
+        template = await db.policies.find_one(
             {
-                "leave_type": leave_type
-            }
+                "leave_type": leave_type,
+                "effective_from": {
+                    "$lt": new_start
+                },
+            },
+            sort=[("effective_from", -1)],
         )
 
-        if policy_doc is None:
+        if template is None:
             continue
 
-        policy_update = {
-            "annual_entitlement": entitlement,
-        }
+        # Close the open-ended predecessor at the year boundary.
+        if template.get("effective_to") is None:
 
-        # Never let the balance cap fall below the entitlement.
-        current_maximum = (
-            policy_doc.get("balance", {}).get("maximum")
+            await db.policies.update_one(
+                {
+                    "_id": template["_id"]
+                },
+                {
+                    "$set": {
+                        "effective_to": prior_end
+                    }
+                },
+            )
+
+        balance = dict(
+            template.get("balance") or {}
         )
 
-        if (
-            current_maximum is not None
-            and current_maximum < entitlement
-        ):
-            policy_update["balance.maximum"] = entitlement
+        maximum = balance.get("maximum")
 
-        if policy_doc.get("tenure_rules"):
-            policy_update["tenure_rules"] = []
-            policy_update["tenure_rules_backup"] = (
-                policy_doc["tenure_rules"]
-            )
+        if maximum is not None and maximum < entitlement:
+            balance["maximum"] = entitlement
+
+        future_version = {
+            "policy_id": f"{leave_type}_{effective_year}",
+            "leave_type": leave_type,
+            "annual_entitlement": entitlement,
+            "tenure_rules": [],
+            "accrual": template.get("accrual"),
+            "proration": template.get("proration"),
+            "rounding": template.get("rounding"),
+            "carry_forward": template.get("carry_forward"),
+            "balance": balance,
+            "effective_from": new_start,
+            "effective_to": None,
+        }
 
         await db.policies.update_one(
             {
-                "_id": policy_doc["_id"]
+                "leave_type": leave_type,
+                "effective_from": new_start,
             },
             {
-                "$set": policy_update
+                "$set": future_version
             },
+            upsert=True,
         )
 
     return await get_leave_policies()

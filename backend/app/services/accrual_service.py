@@ -579,6 +579,14 @@ class AccrualService:
                 )
             )
 
+            # Days classified as unpaid spill-over do not
+            # consume the paid balance for this leave type.
+            unpaid_days = float(
+                request.get("unpaid_days") or 0.0
+            )
+
+            used_days = max(0.0, used_days - unpaid_days)
+
             total_used += used_days
 
         return float(total_used)

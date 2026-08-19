@@ -17,6 +17,28 @@ export function EmployeeDashboardPage() {
   const myRequests = getMyRequests(currentUser?.id);
   const balances = getUserBalances(currentUser?.id);
 
+  // Balances prorate monthly: "remaining" is measured against days accrued
+  // so far this year, not the full annual entitlement. Keep every number on
+  // a card on the same scale so the arithmetic visibly adds up.
+  const balanceMeta = (b, fallbackTotal) => {
+    const total = b?.total ?? fallbackTotal;
+    const accrued = b?.accrued ?? total;
+    const used = b?.used ?? 0;
+    const remaining = b?.remaining ?? Math.max(0, accrued - used);
+    const prorated = accrued < total;
+    return {
+      remaining,
+      caption: prorated
+        ? `${used} used · ${accrued} of ${total} accrued so far this year`
+        : `${used} of ${total} days used`,
+      barPct: Math.min(100, (remaining / (accrued || total || 1)) * 100),
+    };
+  };
+
+  const annualMeta = balanceMeta(balances.annual, 20);
+  const sickMeta = balanceMeta(balances.sick, 12);
+  const casualMeta = balanceMeta(balances.casual, 6);
+
   // Summary counts
   const pendingRequests = myRequests.filter((r) => r.status === 'pending');
   const draftRequests = myRequests.filter((r) => r.status === 'draft');
@@ -110,18 +132,18 @@ export function EmployeeDashboardPage() {
           <div>
             <div className="flex items-baseline gap-1.5 mb-1">
               <span className="text-3xl font-bold text-[#0f1d27]">
-                {balances.annual?.remaining ?? 8}
+                {annualMeta.remaining}
               </span>
               <span className="text-sm text-[#687781]">days available</span>
             </div>
             <p className="text-xs text-[#687781] mb-3">
-              {balances.annual?.used ?? 0} of {balances.annual?.total ?? 20} days used
+              {annualMeta.caption}
             </p>
             <div className="w-full bg-[#d5e4f3] rounded-full h-1.5 overflow-hidden">
               <div
                 className="bg-[#00646f] h-1.5 rounded-full transition-all duration-500"
                 style={{
-                  width: `${Math.min(100, ((balances.annual?.remaining ?? 8) / (balances.annual?.total ?? 20)) * 100)}%`,
+                  width: `${annualMeta.barPct}%`,
                 }}
               ></div>
             </div>
@@ -141,18 +163,18 @@ export function EmployeeDashboardPage() {
           <div>
             <div className="flex items-baseline gap-1.5 mb-1">
               <span className="text-3xl font-bold text-[#0f1d27]">
-                {balances.sick?.remaining ?? 8}
+                {sickMeta.remaining}
               </span>
               <span className="text-sm text-[#687781]">days available</span>
             </div>
             <p className="text-xs text-[#687781] mb-3">
-              {balances.sick?.used ?? 0} of {balances.sick?.total ?? 12} days used
+              {sickMeta.caption}
             </p>
             <div className="w-full bg-[#d5e4f3] rounded-full h-1.5 overflow-hidden">
               <div
                 className="bg-[#b7791f] h-1.5 rounded-full transition-all duration-500"
                 style={{
-                  width: `${Math.min(100, ((balances.sick?.remaining ?? 8) / (balances.sick?.total ?? 12)) * 100)}%`,
+                  width: `${sickMeta.barPct}%`,
                 }}
               ></div>
             </div>
@@ -172,18 +194,18 @@ export function EmployeeDashboardPage() {
           <div>
             <div className="flex items-baseline gap-1.5 mb-1">
               <span className="text-3xl font-bold text-[#0f1d27]">
-                {balances.casual?.remaining ?? 2}
+                {casualMeta.remaining}
               </span>
               <span className="text-sm text-[#687781]">days available</span>
             </div>
             <p className="text-xs text-[#687781] mb-3">
-              {balances.casual?.used ?? 0} of {balances.casual?.total ?? 6} days used
+              {casualMeta.caption}
             </p>
             <div className="w-full bg-[#d5e4f3] rounded-full h-1.5 overflow-hidden">
               <div
                 className="bg-[#3d6fa8] h-1.5 rounded-full transition-all duration-500"
                 style={{
-                  width: `${Math.min(100, ((balances.casual?.remaining ?? 2) / (balances.casual?.total ?? 6)) * 100)}%`,
+                  width: `${casualMeta.barPct}%`,
                 }}
               ></div>
             </div>

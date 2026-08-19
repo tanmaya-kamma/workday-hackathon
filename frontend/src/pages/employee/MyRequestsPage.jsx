@@ -355,6 +355,11 @@ export function MyRequestsPage() {
                         <div>
                           <span className="text-sm font-semibold text-[#0f1d27] block">
                             {req.leaveType}
+                            {req.unpaidDays > 0 && (
+                              <span className="ml-1.5 text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-[#ffdad6] text-[#ba1a1a] align-middle">
+                                +{req.unpaidDays}d unpaid
+                              </span>
+                            )}
                           </span>
                           <span className="text-[11px] text-[#687781]">
                             {req.submittedDisplay || "Draft"}

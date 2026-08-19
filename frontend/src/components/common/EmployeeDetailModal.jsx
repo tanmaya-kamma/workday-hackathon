@@ -160,7 +160,7 @@ export function EmployeeDetailModal({ isOpen, onClose, employee, onSelectRequest
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <StatusBadge status={req.status} />
+                      <StatusBadge status={req.status} stage={req.approvalStage} />
                       {onSelectRequest && (
                         <button
                           type="button"

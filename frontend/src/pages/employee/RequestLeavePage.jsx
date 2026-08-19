@@ -113,14 +113,19 @@ export function RequestLeavePage() {
         errs.reason = 'Reason must be at least 5 characters.';
       }
 
-      if (leaveType !== 'unpaid' && workingDays > currentAvailableBalance) {
-        errs.balance = `Insufficient leave balance. You requested ${workingDays} days but only have ${currentAvailableBalance} available.`;
-      }
+      // Exceeding the balance no longer blocks submission — the
+      // excess days are classified as unpaid (warned inline below).
     }
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
+
+  // Days beyond the available balance become unpaid leave.
+  const unpaidDays = useMemo(() => {
+    if (leaveType === 'unpaid') return workingDays;
+    return Math.max(0, workingDays - Math.max(0, currentAvailableBalance));
+  }, [leaveType, workingDays, currentAvailableBalance]);
 
   // 1. Handle Save Draft
   const handleSaveDraft = () => {
@@ -195,11 +200,17 @@ export function RequestLeavePage() {
         {/* Form Fields (2 Cols) */}
         <Card className="lg:col-span-2 p-6 sm:p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Global balance error */}
-            {errors.balance && (
-              <div className="p-4 bg-[#ffdad6]/70 border border-[#ba1a1a]/30 rounded-xl text-xs font-semibold text-[#ba1a1a] flex items-center gap-2 animate-in fade-in">
-                <span className="material-symbols-outlined text-[18px]">error</span>
-                <span>{errors.balance}</span>
+            {/* Unpaid spill-over warning (does not block submission) */}
+            {unpaidDays > 0 && leaveType !== 'unpaid' && (
+              <div className="p-4 bg-[#ffdad6]/70 border border-[#ba1a1a]/30 rounded-xl text-xs font-semibold text-[#ba1a1a] flex items-start gap-2 animate-in fade-in">
+                <span className="material-symbols-outlined text-[18px] shrink-0">error</span>
+                <span>
+                  You are requesting {workingDays} working days but only have{' '}
+                  {Math.max(0, currentAvailableBalance)} {leaveTypeNames[leaveType]} day
+                  {currentAvailableBalance === 1 ? '' : 's'} available.{' '}
+                  <strong>{unpaidDays} day{unpaidDays > 1 ? 's' : ''} will be UNPAID.</strong>{' '}
+                  You can still submit — your manager will see the paid/unpaid split.
+                </span>
               </div>
             )}
 
@@ -367,20 +378,29 @@ export function RequestLeavePage() {
                     </div>
 
                     <div className="flex justify-between items-center py-1.5 border-b border-[#dfe5e8]">
-                      <span className="text-[#687781]">Deduction</span>
+                      <span className="text-[#687781]">Paid Deduction</span>
                       <span className="font-bold text-[#ba1a1a]">
-                        - {workingDays} Days
+                        - {Math.min(workingDays, Math.max(0, currentAvailableBalance))} Days
                       </span>
                     </div>
+
+                    {unpaidDays > 0 && (
+                      <div className="flex justify-between items-center py-1.5 border-b border-[#dfe5e8]">
+                        <span className="text-[#ba1a1a] font-semibold">Unpaid Days</span>
+                        <span className="font-bold text-[#ba1a1a]">
+                          {unpaidDays} Days
+                        </span>
+                      </div>
+                    )}
 
                     <div className="flex justify-between items-center py-2 bg-[#f5f7f8] px-3 rounded-lg">
                       <span className="font-semibold text-[#0f1d27]">Balance After Request</span>
                       <span
                         className={`font-bold text-sm ${
-                          remainingAfterRequest < 0 ? 'text-[#ba1a1a]' : 'text-[#2e7d5b]'
+                          unpaidDays > 0 ? 'text-[#ba1a1a]' : 'text-[#2e7d5b]'
                         }`}
                       >
-                        {remainingAfterRequest} Days
+                        {Math.max(0, remainingAfterRequest)} Days
                       </span>
                     </div>
                   </>

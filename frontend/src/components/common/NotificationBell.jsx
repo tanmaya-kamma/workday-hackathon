@@ -1,19 +1,32 @@
 import React, { useState, useRef, useEffect } from 'react';
 import api from '../../api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useLeave } from '../../context/LeaveContext.jsx';
 
 export function NotificationBell() {
   const { currentUser } = useAuth();
+  const { fetchRequestsFromDB } = useLeave();
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const latestIdRef = useRef(null);
 
   const fetchNotifications = async () => {
     if (!currentUser?.id) return;
     try {
       const res = await api.get('/notifications/');
       if (res.data) {
-        setNotifications(res.data.items || []);
+        const items = res.data.items || [];
+        setNotifications(items);
+
+        // A new notification means some leave/reschedule state changed
+        // elsewhere (e.g. an employee accepted a reschedule while this
+        // session was open) — resync leave data so lists show fresh dates.
+        const newestId = items[0]?.id ?? null;
+        if (latestIdRef.current !== null && newestId !== latestIdRef.current) {
+          fetchRequestsFromDB?.();
+        }
+        latestIdRef.current = newestId;
       }
     } catch (e) {
       // Silently fail — notifications are non-critical

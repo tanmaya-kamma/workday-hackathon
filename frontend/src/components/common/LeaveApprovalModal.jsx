@@ -81,7 +81,7 @@ export function LeaveApprovalModal({ isOpen, onClose, request, initialMode = 're
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <StatusBadge status={request.status} />
+            <StatusBadge status={request.status} stage={request.approvalStage} />
             <button
               type="button"
               onClick={onClose}
@@ -150,8 +150,19 @@ export function LeaveApprovalModal({ isOpen, onClose, request, initialMode = 're
                   {request.typeKey === 'sick' ? 'medical_services' : 'flight_takeoff'}
                 </span>
                 <div>
-                  <span className="text-sm font-bold text-[#0f1d27] block">{request.leaveType}</span>
-                  <span className="text-xs text-[#00646f] font-semibold">{request.durationDays} Working Day(s)</span>
+                  <span className="text-sm font-bold text-[#0f1d27] block">
+                    {request.leaveType}
+                    {request.unpaidDays > 0 && (
+                      <span className="ml-1.5 text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-[#ffdad6] text-[#ba1a1a] align-middle">
+                        +{request.unpaidDays}d unpaid
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-xs text-[#00646f] font-semibold">
+                    {request.unpaidDays > 0
+                      ? `${request.durationDays} Working Day(s) — ${Math.max(0, request.durationDays - request.unpaidDays)} paid · ${request.unpaidDays} unpaid`
+                      : `${request.durationDays} Working Day(s)`}
+                  </span>
                 </div>
               </div>
             </div>

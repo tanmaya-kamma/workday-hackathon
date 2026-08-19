@@ -444,8 +444,13 @@ class ValidationService:
             }
 
         # -----------------------------------------------------
-        # BALANCE VALIDATION
+        # BALANCE VALIDATION → UNPAID SPILL-OVER
         # -----------------------------------------------------
+        #
+        # Requests that exceed the usable balance are NOT
+        # blocked. The excess days are classified as unpaid
+        # leave: the employee is warned at submission and
+        # approvers see the paid/unpaid split on the request.
 
         usable_balance = float(
             eligibility.get(
@@ -454,22 +459,20 @@ class ValidationService:
             )
         )
 
-        if usable_balance < requested_days:
+        if leave_type.strip().lower() == "unpaid":
 
-            return {
-                "valid": False,
-                "employee_id": employee_id,
-                "leave_type": leave_type,
-                "start_date": start_date.isoformat(),
-                "end_date": end_date.isoformat(),
-                "requested_days": requested_days,
-                "usable_balance": usable_balance,
-                "non_working_days": non_working_days,
-                "reason": (
-                    f"Insufficient usable balance. "
-                    f"Available: {usable_balance} days."
-                )
-            }
+            paid_days = 0.0
+
+            unpaid_days = float(requested_days)
+
+        else:
+
+            paid_days = min(
+                float(requested_days),
+                max(usable_balance, 0.0)
+            )
+
+            unpaid_days = float(requested_days) - paid_days
 
         # -----------------------------------------------------
         # FINAL DECISION
@@ -482,6 +485,8 @@ class ValidationService:
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat(),
             "requested_days": requested_days,
+            "paid_days": paid_days,
+            "unpaid_days": unpaid_days,
             "usable_balance": usable_balance,
             "region": region,
             "day_count_basis": policy.get(

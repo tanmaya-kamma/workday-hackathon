@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 
 import api from "../api.js";
 import { useAuth } from "./AuthContext.jsx";
@@ -84,6 +84,9 @@ export function LeaveProvider({ children }) {
       )} - ${formatDate(item.end_date)}`,
 
       durationDays: item.total_days || 1,
+
+      paidDays: item.paid_days ?? null,
+      unpaidDays: item.unpaid_days || 0,
 
       reason: item.reason || "",
 
@@ -451,6 +454,30 @@ export function LeaveProvider({ children }) {
   }, [currentUser]);
 
   // ============================================================
+  // RESYNC ON WINDOW FOCUS
+  // ============================================================
+  //
+  // Leave data can change from another session (e.g. an employee
+  // accepts a reschedule while the manager's window is open).
+  // Refetch when this window regains focus, throttled to 10s.
+
+  const lastFocusSyncRef = useRef(0);
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const handleFocus = () => {
+      const now = Date.now();
+      if (now - lastFocusSyncRef.current < 10000) return;
+      lastFocusSyncRef.current = now;
+      fetchRequestsFromDB();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [currentUser?.id]);
+
+  // ============================================================
   // GLOBAL TOAST
   // ============================================================
 
@@ -690,7 +717,16 @@ export function LeaveProvider({ children }) {
         await fetchEmployeesFromDB();
       }
 
-      showToast("Leave request submitted successfully.", "success");
+      const unpaidDays = newLeave?.unpaid_days || 0;
+
+      if (unpaidDays > 0) {
+        showToast(
+          `Request submitted — ${unpaidDays} day${unpaidDays > 1 ? "s" : ""} exceed${unpaidDays > 1 ? "" : "s"} your available balance and will be UNPAID.`,
+          "danger",
+        );
+      } else {
+        showToast("Leave request submitted successfully.", "success");
+      }
 
       return mapBackendLeaveToFrontend(newLeave);
     } catch (err) {
@@ -1383,3 +1419,4 @@ export function useLeave() {
 
   return context;
 }
+

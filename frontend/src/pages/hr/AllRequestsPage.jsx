@@ -641,10 +641,17 @@ export function AllRequestsPage({ defaultStatus = "all" }) {
                       <td className="py-3.5 px-4">
                         <span className="font-semibold text-[#00646f] block">
                           {req.leaveType}
+                          {req.unpaidDays > 0 && (
+                            <span className="ml-1.5 text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-[#ffdad6] text-[#ba1a1a] align-middle">
+                              +{req.unpaidDays}d unpaid
+                            </span>
+                          )}
                         </span>
 
                         <span className="text-[11px] text-[#687781] font-medium">
-                          {req.durationDays || 1} Day(s)
+                          {req.unpaidDays > 0
+                            ? `${req.durationDays || 1} Day(s) — ${Math.max(0, (req.durationDays || 1) - req.unpaidDays)} paid · ${req.unpaidDays} unpaid`
+                            : `${req.durationDays || 1} Day(s)`}
                         </span>
                       </td>
 
@@ -668,7 +675,7 @@ export function AllRequestsPage({ defaultStatus = "all" }) {
                       {/* STATUS */}
 
                       <td className="py-3.5 px-4">
-                        <StatusBadge status={req.status} />
+                        <StatusBadge status={req.status} stage={req.approvalStage} />
                       </td>
 
                       {/* SUBMITTED */}

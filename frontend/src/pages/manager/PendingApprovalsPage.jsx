@@ -473,6 +473,11 @@ export function PendingApprovalsPage() {
                             : "event"}
                         </span>
                         <span className="text-xs sm:text-sm font-bold text-[#0f1d27]">{req.leaveType}</span>
+                        {req.unpaidDays > 0 && (
+                          <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-[#ffdad6] text-[#ba1a1a]">
+                            +{req.unpaidDays}d unpaid
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div>

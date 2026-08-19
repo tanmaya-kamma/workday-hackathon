@@ -333,6 +333,21 @@ async def submit_leave(
             ),
         )
 
+    # Days beyond the usable balance are allowed but unpaid.
+    paid_days = float(
+        validation.get(
+            "paid_days",
+            requested_days,
+        )
+    )
+
+    unpaid_days = float(
+        validation.get(
+            "unpaid_days",
+            0.0,
+        )
+    )
+
     # ----------------------------------------------------------------------
     # APPROVAL ENGINE
     # ----------------------------------------------------------------------
@@ -509,6 +524,10 @@ async def submit_leave(
         # Policy-aware charged days
         "total_days": requested_days,
         "requested_days": requested_days,
+
+        # Paid vs unpaid split (unpaid = days beyond usable balance)
+        "paid_days": paid_days,
+        "unpaid_days": unpaid_days,
 
         # Request information
         "reason": data.reason,
@@ -829,29 +848,18 @@ async def get_team_leaves(
 
     if role == "manager":
 
+        # Managers see EVERY request from their team — including
+        # HR-direct (6+ day) requests and those already escalated to
+        # HR — for visibility. Which ones are actionable is decided
+        # by approval_stage/current_approver on the client and at
+        # approve-time by the approval engine.
         query = {
             "$or": [
                 {
                     "manager_id": mgr_id,
-                    "approval_stage": "MANAGER",
-                    "current_approver": mgr_id,
                 },
                 {
                     "manager_id": str(mgr_id),
-                    "approval_stage": "MANAGER",
-                    "current_approver": str(mgr_id),
-                },
-                {
-                    "manager_id": mgr_id,
-                    "approval_stage": {
-                        "$exists": False,
-                    },
-                },
-                {
-                    "manager_id": str(mgr_id),
-                    "approval_stage": {
-                        "$exists": False,
-                    },
                 },
             ]
         }
@@ -1466,7 +1474,7 @@ async def _deduct_leave_balance(
     if emp_oid is None:
         return
 
-    total_days = int(
+    total_days = float(
         leave_doc.get(
             "requested_days",
             leave_doc.get(
@@ -1475,6 +1483,21 @@ async def _deduct_leave_balance(
             ),
         )
     )
+
+    # Only the paid portion is charged against the balance;
+    # days beyond the usable balance were classified unpaid.
+    paid_days = leave_doc.get("paid_days")
+
+    if paid_days is not None:
+        deduct_days = float(paid_days)
+    else:
+        unpaid_days = float(
+            leave_doc.get("unpaid_days") or 0.0
+        )
+        deduct_days = max(0.0, total_days - unpaid_days)
+
+    if deduct_days <= 0:
+        return
 
     field_map = {
         "annual": "vacation",
@@ -1499,13 +1522,13 @@ async def _deduct_leave_balance(
                     f"balances."
                     f"{target_field}."
                     f"remaining"
-                ): -total_days,
+                ): -deduct_days,
 
                 (
                     f"balances."
                     f"{target_field}."
                     f"used"
-                ): total_days,
+                ): deduct_days,
             }
         },
     )
@@ -1721,6 +1744,17 @@ def _doc_to_response(
 
         total_days=total_days,
 
+        paid_days=doc.get(
+            "paid_days"
+        ),
+
+        unpaid_days=float(
+            doc.get(
+                "unpaid_days"
+            )
+            or 0.0
+        ),
+
         reason=doc.get(
             "reason",
             "",
@@ -1729,6 +1763,10 @@ def _doc_to_response(
         status=doc.get(
             "status",
             "pending",
+        ),
+
+        approval_stage=doc.get(
+            "approval_stage"
         ),
 
         manager_id=mgr_id,

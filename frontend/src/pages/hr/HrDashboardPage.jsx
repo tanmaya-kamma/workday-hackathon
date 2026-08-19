@@ -38,13 +38,18 @@ export function HrDashboardPage() {
   // LEAVE POLICY STATE
   // ============================================================
 
+  const currentYear = new Date().getFullYear();
+
   const [policy, setPolicy] = useState({
     annual_leave: 20,
     sick_leave: 12,
     casual_leave: 6,
     manager_approval_days: 2,
     hr_direct_approval_days: 6,
+    effective_year: currentYear + 1,
   });
+
+  const [upcomingPolicies, setUpcomingPolicies] = useState([]);
 
   const [policyLoading, setPolicyLoading] = useState(false);
 
@@ -87,7 +92,7 @@ export function HrDashboardPage() {
         throw new Error(data.detail || "Failed to load leave policies.");
       }
 
-      setPolicy({
+      setPolicy((prev) => ({
         annual_leave: data.annual_leave ?? 20,
 
         sick_leave: data.sick_leave ?? 12,
@@ -97,7 +102,11 @@ export function HrDashboardPage() {
         manager_approval_days: data.manager_approval_days ?? 2,
 
         hr_direct_approval_days: data.hr_direct_approval_days ?? 6,
-      });
+
+        effective_year: prev.effective_year || currentYear + 1,
+      }));
+
+      setUpcomingPolicies(data.upcoming_policies || []);
     } catch (error) {
       console.error("Policy loading error:", error);
 
@@ -118,9 +127,19 @@ export function HrDashboardPage() {
   // ============================================================
 
   const savePolicies = async () => {
-    setPolicyLoading(true);
     setPolicyMessage("");
     setPolicyError("");
+
+    // The current year's policy is immutable — live balances are
+    // calculated from it. Only future years can be configured.
+    if (Number(policy.effective_year) <= currentYear) {
+      setPolicyError(
+        `The ${currentYear} leave policy is already in effect and cannot be added or changed — employee balances are being calculated from it right now. New policies can only be added for ${currentYear + 1} and onward.`,
+      );
+      return;
+    }
+
+    setPolicyLoading(true);
 
     try {
       const response = await fetch(`${API_BASE}/hr/policies`, {
@@ -141,19 +160,11 @@ export function HrDashboardPage() {
         throw new Error(data.detail || "Failed to save leave policies.");
       }
 
-      setPolicy({
-        annual_leave: data.annual_leave ?? 20,
+      setUpcomingPolicies(data.upcoming_policies || []);
 
-        sick_leave: data.sick_leave ?? 12,
-
-        casual_leave: data.casual_leave ?? 6,
-
-        manager_approval_days: data.manager_approval_days ?? 2,
-
-        hr_direct_approval_days: data.hr_direct_approval_days ?? 6,
-      });
-
-      setPolicyMessage("Leave policies updated successfully.");
+      setPolicyMessage(
+        `Policy saved — takes effect January 1, ${policy.effective_year}. Current-year balances are unchanged.`,
+      );
     } catch (error) {
       console.error("Policy save error:", error);
 
@@ -314,7 +325,36 @@ export function HrDashboardPage() {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+          {/* EFFECTIVE YEAR */}
+
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-[#687781] block mb-1.5">
+              Effective Year
+            </label>
+
+            <input
+              type="number"
+              min={currentYear + 1}
+              value={policy.effective_year}
+              onChange={(e) =>
+                setPolicy((prev) => ({
+                  ...prev,
+                  effective_year: Number(e.target.value),
+                }))
+              }
+              className={`w-full px-3 py-2.5 text-sm font-semibold rounded-xl border bg-white focus:outline-none ${
+                Number(policy.effective_year) <= currentYear
+                  ? "border-[#ba1a1a] text-[#ba1a1a] focus:border-[#ba1a1a]"
+                  : "border-[#dfe5e8] focus:border-[#00646f]"
+              }`}
+            />
+
+            <span className="text-[10px] text-[#687781] block mt-1">
+              {currentYear + 1} or later
+            </span>
+          </div>
+
           {/* ANNUAL */}
 
           <div>
@@ -451,14 +491,38 @@ export function HrDashboardPage() {
           </div>
         </div>
 
+        {/* UPCOMING POLICIES */}
+
+        {upcomingPolicies.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mt-4">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#687781]">
+              Scheduled policies:
+            </span>
+            {upcomingPolicies.map((p) => (
+              <span
+                key={p.effective_year}
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-[#ebf5ff] text-[#005cb9] border border-[#0875e1]/20"
+              >
+                <span className="material-symbols-outlined text-[14px]">event_upcoming</span>
+                {p.effective_year} — Annual {p.annual_leave}d · Sick {p.sick_leave}d · Casual {p.casual_leave}d
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* POLICY FOOTER */}
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-5 pt-4 border-t border-[#dfe5e8]">
-          <div>
+          <div className="flex-1">
             {policyError && (
-              <span className="text-xs text-[#ba1a1a] font-medium">
-                {policyError}
-              </span>
+              <div className="flex items-start gap-2 p-3 bg-[#ffdad6]/70 border border-[#ba1a1a]/30 rounded-xl animate-in fade-in">
+                <span className="material-symbols-outlined text-[#ba1a1a] text-[18px] shrink-0">
+                  error
+                </span>
+                <span className="text-xs text-[#ba1a1a] font-semibold">
+                  {policyError}
+                </span>
+              </div>
             )}
 
             {!policyError && policyMessage && (
@@ -962,7 +1026,7 @@ export function HrDashboardPage() {
                     </td>
 
                     <td className="py-3 px-3">
-                      <StatusBadge status={req.status} />
+                      <StatusBadge status={req.status} stage={req.approvalStage} />
                     </td>
 
                     <td className="py-3 px-3 text-right">

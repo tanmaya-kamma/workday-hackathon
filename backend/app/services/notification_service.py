@@ -80,6 +80,17 @@ async def notify_leave_submitted(
             ),
         )
 
+        unpaid_days = float(
+            leave_doc.get("unpaid_days") or 0.0
+        )
+
+        unpaid_text = (
+            f" Note: {unpaid_days:g} of these day(s) exceed "
+            f"the available balance and will be unpaid."
+            if unpaid_days > 0
+            else ""
+        )
+
         notification = NotificationInDB(
             user_id=manager_id,
             title="New Leave Request",
@@ -89,6 +100,7 @@ async def notify_leave_submitted(
                 f"{leave_doc.get('leave_type', 'leave')} leave "
                 f"({leave_doc.get('start_date')} to "
                 f"{leave_doc.get('end_date')})."
+                f"{unpaid_text}"
             ),
             type="leave_request",
             reference_id=str(

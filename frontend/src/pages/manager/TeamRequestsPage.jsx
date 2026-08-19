@@ -275,6 +275,11 @@ export function TeamRequestsPage() {
                           {req.typeKey === 'sick' ? 'medical_services' : 'event'}
                         </span>
                         {req.leaveType}
+                        {req.unpaidDays > 0 && (
+                          <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-[#ffdad6] text-[#ba1a1a]">
+                            +{req.unpaidDays}d unpaid
+                          </span>
+                        )}
                       </span>
                     </td>
                     <td className="p-4 px-6 text-xs text-[#3e494a]">{req.startDate}</td>
@@ -283,7 +288,7 @@ export function TeamRequestsPage() {
                       {req.durationDays} {req.durationDays === 1 ? 'day' : 'days'}
                     </td>
                     <td className="p-4 px-6">
-                      <StatusBadge status={req.status} />
+                      <StatusBadge status={req.status} stage={req.approvalStage} />
                     </td>
                     <td className="p-4 px-6 text-xs text-[#687781]">
                       {req.submittedDisplay || req.submittedAt || '—'}

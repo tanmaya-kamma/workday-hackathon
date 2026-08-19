@@ -351,7 +351,7 @@ export function ManagerDashboardPage() {
                       {req.durationDays} {req.durationDays === 1 ? 'day' : 'days'}
                     </td>
                     <td className="p-4 px-6">
-                      <StatusBadge status={req.status} />
+                      <StatusBadge status={req.status} stage={req.approvalStage} />
                     </td>
                     <td className="p-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>

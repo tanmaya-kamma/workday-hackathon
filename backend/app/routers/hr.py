@@ -47,6 +47,18 @@ class LeavePolicyUpdate(BaseModel):
         ge=1
     )
 
+    # Policies can only be added for FUTURE years — the current
+    # year's policy is already in use by live balances and is
+    # immutable. Enforced in hr_service.update_leave_policies.
+    effective_year: int = Field(
+        ge=2000,
+        le=2100,
+        description=(
+            "Year the policy takes effect (January 1). "
+            "Must be next year or later."
+        ),
+    )
+
 
 # ============================================================
 # EMPLOYEES

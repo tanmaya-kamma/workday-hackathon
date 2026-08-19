@@ -1,8 +1,14 @@
 import React from "react";
 import { Badge } from "./Badge.jsx";
 
-export function StatusBadge({ status, className = "", size = "sm" }) {
-  const normalized = String(status || "default").toLowerCase();
+export function StatusBadge({ status, stage = null, className = "", size = "sm" }) {
+  let normalized = String(status || "default").toLowerCase();
+
+  // 6+ day requests route directly to HR: status stays "pending" but
+  // the approval stage is "HR", so label them as awaiting HR.
+  if (normalized === "pending" && String(stage || "").toUpperCase() === "HR") {
+    normalized = "pending_hr";
+  }
 
   const labels = {
     pending: "Pending Manager",

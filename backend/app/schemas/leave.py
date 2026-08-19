@@ -53,8 +53,11 @@ class LeaveResponse(BaseModel):
     start_date: date
     end_date: date
     total_days: int
+    paid_days: Optional[float] = None
+    unpaid_days: float = 0
     reason: str
     status: str
+    approval_stage: Optional[str] = None
     manager_id: str
     manager_remarks: Optional[str] = None
     applied_at: datetime
