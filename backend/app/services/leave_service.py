@@ -841,6 +841,18 @@ async def get_team_leaves(
                     "approval_stage": "MANAGER",
                     "current_approver": str(mgr_id),
                 },
+                {
+                    "manager_id": mgr_id,
+                    "approval_stage": {
+                        "$exists": False,
+                    },
+                },
+                {
+                    "manager_id": str(mgr_id),
+                    "approval_stage": {
+                        "$exists": False,
+                    },
+                },
             ]
         }
 

@@ -69,6 +69,7 @@ class UserProfile(BaseModel):
     role: str
     department: str
     manager_id: Optional[str] = None
+    manager_name: Optional[str] = None
     leave_balances: LeaveBalanceResponse
     is_active: bool
     created_at: datetime

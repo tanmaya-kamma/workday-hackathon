@@ -83,6 +83,15 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }) {
               </NavLink>
 
               <NavLink
+                to="/employee/what-if"
+                className={getNavLinkClass}
+                onClick={onCloseMobile}
+              >
+                <span className="material-symbols-outlined text-[20px]">model_training</span>
+                <span>What-If Scenarios</span>
+              </NavLink>
+
+              <NavLink
                 to="/employee/my-leave"
                 className={getNavLinkClass}
                 onClick={onCloseMobile}
@@ -150,6 +159,15 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }) {
               >
                 <span className="material-symbols-outlined text-[20px]">calendar_month</span>
                 <span>Team Calendar</span>
+              </NavLink>
+
+              <NavLink
+                to="/manager/what-if"
+                className={getNavLinkClass}
+                onClick={onCloseMobile}
+              >
+                <span className="material-symbols-outlined text-[20px]">model_training</span>
+                <span>What-If Scenarios</span>
               </NavLink>
             </>
           )}

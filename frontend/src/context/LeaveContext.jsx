@@ -244,7 +244,7 @@ export function LeaveProvider({ children }) {
 
           managerId: u.manager_id,
 
-          managerName: u.manager_id ? "Manager" : "N/A",
+          managerName: u.manager_name || (u.manager_id ? "Manager" : "N/A"),
 
           position:
             u.role === "manager"
@@ -259,20 +259,11 @@ export function LeaveProvider({ children }) {
             u.full_name,
           )}&background=0875e1&color=fff`,
 
-          /*
-           * Employee directory balance information.
-           *
-           * For the currently logged-in employee,
-           * /auth/me is the source of truth.
-           *
-           * For HR/Manager views, this uses the values
-           * returned by /hr/employees.
-           */
           balances: {
             annual: {
-              total: 18,
+              total: 20,
               used: 0,
-              remaining: u.leave_balances?.annual ?? 18,
+              remaining: u.leave_balances?.annual ?? 20,
             },
 
             sick: {
@@ -650,8 +641,8 @@ export function LeaveProvider({ children }) {
 
     return requests.filter(
       (req) =>
-        req.managerId === targetMgrId &&
-        req.userId !== targetMgrId &&
+        String(req.managerId) === String(targetMgrId) &&
+        String(req.userId) !== String(targetMgrId) &&
         req.status === "pending" &&
         (!req.approvalStage || req.approvalStage === "MANAGER"),
     );
@@ -847,7 +838,7 @@ export function LeaveProvider({ children }) {
           annual: {
             total: 18,
             used: 0,
-            remaining: u.leave_balances?.annual ?? 18,
+            remaining: u.leave_balances?.annual ?? 20,
           },
 
           sick: {
@@ -1163,7 +1154,7 @@ export function LeaveProvider({ children }) {
        * Used = Total - Remaining.
        */
 
-      const annualTotal = 18;
+      const annualTotal = 20;
       const sickTotal = 12;
       const casualTotal = 6;
 

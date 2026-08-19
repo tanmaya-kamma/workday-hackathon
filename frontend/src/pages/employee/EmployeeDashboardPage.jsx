@@ -99,103 +99,94 @@ export function EmployeeDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Annual Leave */}
         <Card className="flex flex-col justify-between hover:-translate-y-0.5 transition-all p-6">
-          <div className="flex justify-between items-start mb-6">
+          <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-2 text-[#0f1d27]">
               <span className="material-symbols-outlined text-[#00646f] p-1.5 bg-[#ebf5ff] rounded-lg text-[20px]">
                 flight_takeoff
               </span>
               <h2 className="text-sm font-semibold">Annual Leave</h2>
             </div>
-            <span className="text-[11px] font-bold text-[#687781] uppercase tracking-wider">
-              Days
-            </span>
           </div>
           <div>
-            <div className="flex items-baseline gap-1 mb-2">
+            <div className="flex items-baseline gap-1.5 mb-1">
               <span className="text-3xl font-bold text-[#0f1d27]">
-                {balances.annual?.used ?? 12}
+                {balances.annual?.remaining ?? 8}
               </span>
-              <span className="text-sm text-[#687781]">/ {balances.annual?.total ?? 20}</span>
+              <span className="text-sm text-[#687781]">days available</span>
             </div>
-            <div className="w-full bg-[#d5e4f3] rounded-full h-2 mb-2 overflow-hidden">
+            <p className="text-xs text-[#687781] mb-3">
+              {balances.annual?.used ?? 0} of {balances.annual?.total ?? 20} days used
+            </p>
+            <div className="w-full bg-[#d5e4f3] rounded-full h-1.5 overflow-hidden">
               <div
-                className="bg-[#00646f] h-2 rounded-full transition-all duration-500"
+                className="bg-[#00646f] h-1.5 rounded-full transition-all duration-500"
                 style={{
-                  width: `${Math.min(100, ((balances.annual?.used ?? 12) / (balances.annual?.total ?? 20)) * 100)}%`,
+                  width: `${Math.min(100, ((balances.annual?.remaining ?? 8) / (balances.annual?.total ?? 20)) * 100)}%`,
                 }}
               ></div>
             </div>
-            <p className="text-xs text-[#687781]">
-              <strong>{balances.annual?.remaining ?? 8} days</strong> remaining
-            </p>
           </div>
         </Card>
 
         {/* Sick Leave */}
         <Card className="flex flex-col justify-between hover:-translate-y-0.5 transition-all p-6">
-          <div className="flex justify-between items-start mb-6">
+          <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-2 text-[#0f1d27]">
               <span className="material-symbols-outlined text-[#b7791f] p-1.5 bg-[#b7791f]/10 rounded-lg text-[20px]">
                 medical_services
               </span>
               <h2 className="text-sm font-semibold">Sick Leave</h2>
             </div>
-            <span className="text-[11px] font-bold text-[#687781] uppercase tracking-wider">
-              Days
-            </span>
           </div>
           <div>
-            <div className="flex items-baseline gap-1 mb-2">
+            <div className="flex items-baseline gap-1.5 mb-1">
               <span className="text-3xl font-bold text-[#0f1d27]">
-                {balances.sick?.used ?? 2}
+                {balances.sick?.remaining ?? 8}
               </span>
-              <span className="text-sm text-[#687781]">/ {balances.sick?.total ?? 10}</span>
+              <span className="text-sm text-[#687781]">days available</span>
             </div>
-            <div className="w-full bg-[#d5e4f3] rounded-full h-2 mb-2 overflow-hidden">
+            <p className="text-xs text-[#687781] mb-3">
+              {balances.sick?.used ?? 0} of {balances.sick?.total ?? 12} days used
+            </p>
+            <div className="w-full bg-[#d5e4f3] rounded-full h-1.5 overflow-hidden">
               <div
-                className="bg-[#b7791f] h-2 rounded-full transition-all duration-500"
+                className="bg-[#b7791f] h-1.5 rounded-full transition-all duration-500"
                 style={{
-                  width: `${Math.min(100, ((balances.sick?.used ?? 2) / (balances.sick?.total ?? 10)) * 100)}%`,
+                  width: `${Math.min(100, ((balances.sick?.remaining ?? 8) / (balances.sick?.total ?? 12)) * 100)}%`,
                 }}
               ></div>
             </div>
-            <p className="text-xs text-[#687781]">
-              <strong>{balances.sick?.remaining ?? 8} days</strong> remaining
-            </p>
           </div>
         </Card>
 
         {/* Casual Leave */}
         <Card className="flex flex-col justify-between hover:-translate-y-0.5 transition-all p-6">
-          <div className="flex justify-between items-start mb-6">
+          <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-2 text-[#0f1d27]">
               <span className="material-symbols-outlined text-[#3d6fa8] p-1.5 bg-[#3d6fa8]/10 rounded-lg text-[20px]">
                 event_available
               </span>
               <h2 className="text-sm font-semibold">Casual Leave</h2>
             </div>
-            <span className="text-[11px] font-bold text-[#687781] uppercase tracking-wider">
-              Days
-            </span>
           </div>
           <div>
-            <div className="flex items-baseline gap-1 mb-2">
+            <div className="flex items-baseline gap-1.5 mb-1">
               <span className="text-3xl font-bold text-[#0f1d27]">
-                {balances.casual?.used ?? 4}
+                {balances.casual?.remaining ?? 2}
               </span>
-              <span className="text-sm text-[#687781]">/ {balances.casual?.total ?? 6}</span>
+              <span className="text-sm text-[#687781]">days available</span>
             </div>
-            <div className="w-full bg-[#d5e4f3] rounded-full h-2 mb-2 overflow-hidden">
+            <p className="text-xs text-[#687781] mb-3">
+              {balances.casual?.used ?? 0} of {balances.casual?.total ?? 6} days used
+            </p>
+            <div className="w-full bg-[#d5e4f3] rounded-full h-1.5 overflow-hidden">
               <div
-                className="bg-[#3d6fa8] h-2 rounded-full transition-all duration-500"
+                className="bg-[#3d6fa8] h-1.5 rounded-full transition-all duration-500"
                 style={{
-                  width: `${Math.min(100, ((balances.casual?.used ?? 4) / (balances.casual?.total ?? 6)) * 100)}%`,
+                  width: `${Math.min(100, ((balances.casual?.remaining ?? 2) / (balances.casual?.total ?? 6)) * 100)}%`,
                 }}
               ></div>
             </div>
-            <p className="text-xs text-[#687781]">
-              <strong>{balances.casual?.remaining ?? 2} days</strong> remaining
-            </p>
           </div>
         </Card>
       </div>
@@ -294,8 +285,8 @@ export function EmployeeDashboardPage() {
           </div>
         </Card>
 
-        {/* Upcoming Approved Leave Showcase Card */}
-        <Card className="p-0 overflow-hidden relative flex flex-col justify-between">
+        {/* Upcoming Approved Leave Card */}
+        <Card className="p-0 overflow-hidden flex flex-col justify-between">
           <div className="p-5 px-6 border-b border-[#dfe5e8] flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-[#00646f]">upcoming</span>
@@ -308,49 +299,45 @@ export function EmployeeDashboardPage() {
             )}
           </div>
 
-          <div className="p-6 flex flex-col items-center text-center">
-            {/* Kyoto trip image visual */}
-            <div className="w-full h-36 rounded-xl overflow-hidden relative mb-4 shadow-sm group">
-              <img
-                src={
-                  currentUser?.upcomingLeave?.imageUrl ||
-                  'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=600&q=80'
-                }
-                alt="Upcoming destination"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
-              <div className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-md text-[11px] font-bold text-[#00646f] shadow-sm">
-                Approved
-              </div>
-            </div>
-
-            <h4 className="text-lg font-bold text-[#0f1d27] mb-0.5">
-              {upcomingApproved ? upcomingApproved.reason?.split('•')[0] || 'Scheduled Time Off' : 'Kyoto Trip'}
-            </h4>
-            <p className="text-xs text-[#687781] mb-4">
-              {upcomingApproved
-                ? `${upcomingApproved.leaveType} • ${upcomingApproved.durationDays} Days`
-                : 'Annual Leave • 8 Days'}
-            </p>
-
-            <div className="w-full bg-[#ebf5ff] flex items-center justify-between p-3 rounded-xl border border-[#dfe5e8]">
-              <div className="text-left">
-                <div className="text-[10px] font-bold text-[#687781] uppercase">Starts</div>
-                <div className="text-xs font-semibold text-[#0f1d27]">
-                  {upcomingApproved ? upcomingApproved.startDate : 'Nov 15, 2026'}
+          <div className="p-6 flex flex-col gap-4">
+            {upcomingApproved ? (
+              <>
+                <div className="flex items-start gap-3">
+                  <span className="material-symbols-outlined text-[#00646f] mt-0.5">event_available</span>
+                  <div>
+                    <h4 className="text-sm font-bold text-[#0f1d27]">
+                      {upcomingApproved.reason?.split('•')[0] || 'Scheduled Time Off'}
+                    </h4>
+                    <p className="text-xs text-[#687781] mt-0.5">
+                      {upcomingApproved.leaveType} &middot; {upcomingApproved.durationDays} Days
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <span className="material-symbols-outlined text-[#687781] text-[18px]">
-                arrow_right_alt
-              </span>
-              <div className="text-right">
-                <div className="text-[10px] font-bold text-[#687781] uppercase">Ends</div>
-                <div className="text-xs font-semibold text-[#0f1d27]">
-                  {upcomingApproved ? upcomingApproved.endDate : 'Nov 24, 2026'}
+
+                <div className="bg-[#f5f7fa] flex items-center justify-between p-3 rounded-lg border border-[#dfe5e8]">
+                  <div className="text-left">
+                    <div className="text-[10px] font-bold text-[#687781] uppercase">Starts</div>
+                    <div className="text-xs font-semibold text-[#0f1d27]">
+                      {upcomingApproved.startDate}
+                    </div>
+                  </div>
+                  <span className="material-symbols-outlined text-[#687781] text-[18px]">
+                    arrow_right_alt
+                  </span>
+                  <div className="text-right">
+                    <div className="text-[10px] font-bold text-[#687781] uppercase">Ends</div>
+                    <div className="text-xs font-semibold text-[#0f1d27]">
+                      {upcomingApproved.endDate}
+                    </div>
+                  </div>
                 </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center py-4 text-center">
+                <span className="material-symbols-outlined text-[#b0bec5] text-4xl mb-2">event_busy</span>
+                <p className="text-sm text-[#687781]">No upcoming leave scheduled</p>
               </div>
-            </div>
+            )}
           </div>
         </Card>
       </div>

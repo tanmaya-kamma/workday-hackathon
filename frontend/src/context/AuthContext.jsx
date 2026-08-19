@@ -67,6 +67,8 @@ export function AuthProvider({ children }) {
         employeeId: profile.employee_id,
         managerId: profile.manager_id,
         manager_id: profile.manager_id,
+        managerName: profile.manager_name,
+        manager_name: profile.manager_name,
         position:
           profile.role === "manager"
             ? "Team Lead / Manager"
@@ -84,19 +86,19 @@ export function AuthProvider({ children }) {
         },
         balances: {
           annual: {
-            total: 18,
-            remaining: profile.leave_balances?.annual ?? 18,
-            used: 18 - (profile.leave_balances?.annual ?? 18),
+            total: 20,
+            remaining: profile.leave_balances?.annual ?? 20,
+            used: 20 - (profile.leave_balances?.annual ?? 20),
           },
           sick: {
             total: 12,
             remaining: profile.leave_balances?.sick ?? 12,
-            used: 12 - (profile.leave_balances?.sick ?? 12),
+            used: Math.max(0, 12 - (profile.leave_balances?.sick ?? 12)),
           },
           casual: {
             total: 6,
             remaining: profile.leave_balances?.casual ?? 6,
-            used: 6 - (profile.leave_balances?.casual ?? 6),
+            used: Math.max(0, 6 - (profile.leave_balances?.casual ?? 6)),
           },
           unpaid: {
             total: 0,
@@ -128,6 +130,11 @@ export function AuthProvider({ children }) {
       creds = {
         email: "ravi.patel@company.com",
         password: "manager123",
+      };
+    } else if (roleKey === "hr") {
+      creds = {
+        email: "priya.mehta@company.com",
+        password: "hr123",
       };
     }
 

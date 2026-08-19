@@ -149,7 +149,15 @@ async def _doc_to_profile(doc: dict) -> UserProfile:
         )
 
     mgr_id = doc.get("manager_id")
+    mgr_name = None
     if mgr_id is not None:
+        try:
+            oid = mgr_id if isinstance(mgr_id, ObjectId) else ObjectId(mgr_id)
+            mgr_doc = await db.users.find_one({"_id": oid}, {"full_name": 1})
+            if mgr_doc:
+                mgr_name = mgr_doc.get("full_name")
+        except Exception:
+            pass
         mgr_id = str(mgr_id)
 
     created_at_val = doc.get("created_at") or doc.get("date_of_joining") or datetime.utcnow()
@@ -162,6 +170,7 @@ async def _doc_to_profile(doc: dict) -> UserProfile:
         role=doc.get("role", "employee"),
         department=doc.get("department", "General"),
         manager_id=mgr_id,
+        manager_name=mgr_name,
         leave_balances=balances,
         is_active=doc.get("is_active", True),
         created_at=created_at_val,
